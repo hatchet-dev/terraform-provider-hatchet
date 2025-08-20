@@ -5,7 +5,7 @@ A Terraform provider for managing Hatchet Cloud resources.
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.21
+- [Go](https://golang.org/doc/install) >= 1.25
 
 ## Building The Provider
 
