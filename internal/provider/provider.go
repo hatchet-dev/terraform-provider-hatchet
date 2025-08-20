@@ -44,7 +44,7 @@ func (p *HatchetCloudProvider) Schema(ctx context.Context, req provider.SchemaRe
 			},
 			"token": schema.StringAttribute{
 				MarkdownDescription: "Hatchet Cloud API token",
-				Optional:            true,
+				Required:            true,
 				Sensitive:           true,
 			},
 		},
@@ -60,12 +60,15 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	// Set default endpoint if not provided
+	endpoint := data.Endpoint.ValueString()
+	if endpoint == "" {
+		endpoint = "cloud.onhatchet.run"
+	}
 
 	// Example client configuration for data sources and resources
 	client := &HatchetCloudClient{
-		Endpoint: data.Endpoint.ValueString(),
+		Endpoint: endpoint,
 		Token:    data.Token.ValueString(),
 	}
 	resp.DataSourceData = client

@@ -8,6 +8,7 @@ terraform {
 }
 
 provider "hatchetcloud" {
-  endpoint = "https://api.hatchet.cloud"
-  token    = "your-api-token-here"
+  # endpoint is optional and defaults to "cloud.onhatchet.run"
+  # token is required
+  token = "your-api-token-here"
 }

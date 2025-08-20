@@ -44,8 +44,9 @@ terraform {
 }
 
 provider "hatchetcloud" {
-  endpoint = "https://api.hatchet.cloud"
-  token    = "your-api-token-here"
+  # endpoint is optional and defaults to "cloud.onhatchet.run"
+  # token is required
+  token = "your-api-token-here"
 }
 ```
 
@@ -79,8 +80,8 @@ make clean
 
 The Hatchet Cloud provider supports the following configuration options:
 
-- `endpoint` (Optional): The Hatchet Cloud API endpoint. Defaults to the production API.
-- `token` (Optional, Sensitive): Your Hatchet Cloud API token for authentication.
+- `endpoint` (Optional): The Hatchet Cloud API endpoint. Defaults to "cloud.onhatchet.run".
+- `token` (Required, Sensitive): Your Hatchet Cloud API token for authentication.
 
 ## Contributing
 
