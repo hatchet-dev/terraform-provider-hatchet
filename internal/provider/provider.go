@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -11,20 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure the implementation satisfies the expected interfaces
 var (
 	_ provider.Provider = &HatchetCloudProvider{}
 )
 
-// HatchetCloudProvider is the provider implementation.
 type HatchetCloudProvider struct {
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
-	// testing.
 	version string
 }
 
-// HatchetCloudProviderModel describes the provider data model.
 type HatchetCloudProviderModel struct {
 	Endpoint types.String `tfsdk:"endpoint"`
 	Token    types.String `tfsdk:"token"`
@@ -39,12 +34,12 @@ func (p *HatchetCloudProvider) Schema(ctx context.Context, req provider.SchemaRe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Hatchet Cloud API endpoint",
+				MarkdownDescription: "Endpoint for the Hatchet Cloud instance",
 				Optional:            true,
 			},
 			"token": schema.StringAttribute{
-				MarkdownDescription: "Hatchet Cloud API token",
-				Required:            true,
+				MarkdownDescription: "Management token for the Hatchet Cloud instance. Can also be provided via HATCHET_TOKEN environment variable.",
+				Optional:            true,
 				Sensitive:           true,
 			},
 		},
@@ -60,16 +55,29 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	// Set default endpoint if not provided
 	endpoint := data.Endpoint.ValueString()
 	if endpoint == "" {
 		endpoint = "cloud.onhatchet.run"
 	}
 
-	// Example client configuration for data sources and resources
+	token := data.Token.ValueString()
+	if token == "" {
+		token = os.Getenv("HATCHET_TOKEN")
+	}
+
+	if token == "" {
+		resp.Diagnostics.AddError(
+			"Missing Token Configuration",
+			"The provider cannot create the Hatchet Cloud API client as there is a missing or empty value for the token. "+
+				"Set the token value in the configuration or use the HATCHET_TOKEN environment variable. "+
+				"If either is already set, ensure the value is not empty.",
+		)
+		return
+	}
+
 	client := &HatchetCloudClient{
 		Endpoint: endpoint,
-		Token:    data.Token.ValueString(),
+		Token:    token,
 	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
@@ -79,13 +87,18 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 
 func (p *HatchetCloudProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		// Add your resources here
+		NewOrganizationResource,
+		NewTenantResource,
+		NewTenantAPITokenResource,
+		NewOrganizationMemberResource,
 	}
 }
 
 func (p *HatchetCloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// Add your data sources here
+		NewOrganizationDataSource,
+		NewTenantDataSource,
+		NewOrganizationMembersDataSource,
 	}
 }
 
@@ -97,7 +110,6 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-// HatchetCloudClient is a simple client for the Hatchet Cloud API
 type HatchetCloudClient struct {
 	Endpoint string
 	Token    string
