@@ -2,12 +2,12 @@
 
 # Build the provider
 build:
-	go build -o terraform-provider-hatchetcloud
+	go build -o ./bin/terraform-provider-hatchetcloud
 
 # Install the provider locally
 install: build
-	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchetcloud/1.0.0/darwin_amd64
-	cp terraform-provider-hatchetcloud ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchetcloud/1.0.0/darwin_amd64/
+	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchetcloud/0.1.0/darwin_arm64
+	cp ./bin/terraform-provider-hatchetcloud ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchetcloud/0.1.0/darwin_arm64/
 
 # Run tests
 test:
@@ -20,7 +20,7 @@ clean:
 
 # Format code
 fmt:
-	go fmt ./...
+	gofumpt -w .
 	terraform fmt -recursive ./examples/
 
 # Generate documentation

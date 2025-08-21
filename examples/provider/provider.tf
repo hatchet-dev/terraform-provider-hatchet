@@ -10,10 +10,10 @@ terraform {
 provider "hatchetcloud" {
   # endpoint is optional and defaults to "cloud.onhatchet.run"
   endpoint = "cloud.onhatchet.run"
-  
+
   # Management token for accessing the Hatchet Cloud API
-  # This should be a sensitive value - consider using environment variables
-  token = var.hatchet_management_token
+  # This should be a sensitive value - consider using environment HATCHET_TOKEN
+  # token = var.hatchet_management_token
 }
 
 # Example variable for the management token

@@ -19,8 +19,8 @@ data "hatchetcloud_organization" "existing" {
 # Create a new tenant
 resource "hatchetcloud_tenant" "production" {
   organization_id = data.hatchetcloud_organization.existing.id
-  name           = "Production Environment"
-  slug           = "prod"
+  name            = "Production Environment"
+  slug            = "prod"
 }
 
 # Create multiple tenants using for_each
@@ -44,10 +44,10 @@ variable "environments" {
 
 resource "hatchetcloud_tenant" "environments" {
   for_each = var.environments
-  
+
   organization_id = data.hatchetcloud_organization.existing.id
-  name           = each.value.name
-  slug           = each.value.slug
+  name            = each.value.name
+  slug            = each.value.slug
 }
 
 # Output tenant information

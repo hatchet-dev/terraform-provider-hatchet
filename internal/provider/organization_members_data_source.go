@@ -27,8 +27,8 @@ type OrganizationMembersDataSource struct {
 }
 
 type OrganizationMembersDataSourceModel struct {
-	OrganizationID types.String                          `tfsdk:"organization_id"`
-	Members        []OrganizationMemberDataSourceModel   `tfsdk:"members"`
+	OrganizationID types.String                        `tfsdk:"organization_id"`
+	Members        []OrganizationMemberDataSourceModel `tfsdk:"members"`
 }
 
 type OrganizationMemberDataSourceModel struct {

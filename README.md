@@ -50,6 +50,13 @@ provider "hatchetcloud" {
 }
 ```
 
+You can also use environment variables for configuration:
+
+```bash
+export HATCHET_TOKEN="your-api-token-here"
+export HATCHET_ENDPOINT="cloud.onhatchet.run"  # optional, defaults to cloud.onhatchet.run
+```
+
 ## Development
 
 ### Running Tests
@@ -80,8 +87,8 @@ make clean
 
 The Hatchet Cloud provider supports the following configuration options:
 
-- `endpoint` (Optional): The Hatchet Cloud API endpoint. Defaults to "cloud.onhatchet.run".
-- `token` (Required, Sensitive): Your Hatchet Cloud API token for authentication.
+- `endpoint` (Optional): The Hatchet Cloud API endpoint. Defaults to "cloud.onhatchet.run". Can also be set via the `HATCHET_ENDPOINT` environment variable.
+- `token` (Required, Sensitive): Your Hatchet Cloud API token for authentication. Can also be set via the `HATCHET_TOKEN` environment variable.
 
 ## Contributing
 

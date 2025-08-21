@@ -35,7 +35,7 @@ variable "organization_members" {
 
 resource "hatchetcloud_organization_member" "team_members" {
   for_each = toset(var.organization_members)
-  
+
   organization_id = data.hatchetcloud_organization.existing.id
   user_id         = each.value
 }
@@ -59,7 +59,7 @@ locals {
 
 resource "hatchetcloud_organization_member" "conditional_member" {
   count = local.should_add_member ? 1 : 0
-  
+
   organization_id = data.hatchetcloud_organization.existing.id
   user_id         = var.potential_member_id
 }

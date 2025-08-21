@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	_ resource.Resource              = &TenantResource{}
+	_ resource.Resource                = &TenantResource{}
 	_ resource.ResourceWithImportState = &TenantResource{}
 )
 

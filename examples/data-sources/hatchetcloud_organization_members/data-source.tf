@@ -32,10 +32,10 @@ locals {
 # Create resources only if required user is a member
 resource "hatchetcloud_tenant" "member_restricted_tenant" {
   count = local.is_user_member ? 1 : 0
-  
+
   organization_id = data.hatchetcloud_organization_members.example.organization_id
-  name           = "Member Restricted Tenant"
-  slug           = "member-restricted"
+  name            = "Member Restricted Tenant"
+  slug            = "member-restricted"
 }
 
 # Add new members based on current member count
@@ -62,7 +62,7 @@ locals {
 
 resource "hatchetcloud_organization_member" "conditional_members" {
   for_each = toset(local.members_to_add)
-  
+
   organization_id = data.hatchetcloud_organization_members.example.organization_id
   user_id         = each.value
 }
@@ -70,19 +70,19 @@ resource "hatchetcloud_organization_member" "conditional_members" {
 # Example: Create tenant-specific API tokens for each member
 resource "hatchetcloud_tenant" "member_tenants" {
   for_each = {
-    for idx, member in data.hatchetcloud_organization_members.example.members : 
+    for idx, member in data.hatchetcloud_organization_members.example.members :
     "member-${idx}" => member
   }
-  
+
   organization_id = data.hatchetcloud_organization_members.example.organization_id
-  name           = "Tenant for Member ${each.value.user_id}"
-  slug           = "member-${substr(each.value.user_id, 0, 8)}"
+  name            = "Tenant for Member ${each.value.user_id}"
+  slug            = "member-${substr(each.value.user_id, 0, 8)}"
 }
 
 # Create API tokens for member tenants
 resource "hatchetcloud_tenant_api_token" "member_tokens" {
   for_each = hatchetcloud_tenant.member_tenants
-  
+
   tenant_id = each.value.id
   name      = "Token for ${each.key}"
 }

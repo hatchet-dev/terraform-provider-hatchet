@@ -18,8 +18,8 @@ data "hatchetcloud_organization" "existing" {
 
 resource "hatchetcloud_tenant" "example" {
   organization_id = data.hatchetcloud_organization.existing.id
-  name           = "Example Tenant"
-  slug           = "example"
+  name            = "Example Tenant"
+  slug            = "example"
 }
 
 # Create an API token for the tenant
@@ -32,7 +32,7 @@ resource "hatchetcloud_tenant_api_token" "production_token" {
 resource "hatchetcloud_tenant_api_token" "temp_token" {
   tenant_id  = hatchetcloud_tenant.example.id
   name       = "Temporary Access Token"
-  expires_at = "24h"  # Expires in 24 hours
+  expires_at = "24h" # Expires in 24 hours
 }
 
 # Create multiple API tokens for different purposes
@@ -56,7 +56,7 @@ variable "api_tokens" {
 
 resource "hatchetcloud_tenant_api_token" "service_tokens" {
   for_each = var.api_tokens
-  
+
   tenant_id  = hatchetcloud_tenant.example.id
   name       = each.value.name
   expires_at = each.value.expires_at
@@ -77,7 +77,7 @@ output "temp_token_id" {
 # Example of storing tokens securely in local files (for development only)
 resource "local_sensitive_file" "api_tokens" {
   for_each = hatchetcloud_tenant_api_token.service_tokens
-  
+
   content  = each.value.token
   filename = "${path.module}/.tokens/${each.key}_token.txt"
 }

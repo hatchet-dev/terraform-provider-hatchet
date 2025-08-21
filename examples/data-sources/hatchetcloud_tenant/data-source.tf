@@ -31,7 +31,7 @@ resource "hatchetcloud_tenant_api_token" "production_api_token" {
 # Conditional resource creation based on tenant status
 resource "hatchetcloud_tenant_api_token" "active_tenant_token" {
   count = data.hatchetcloud_tenant.production.status == "active" ? 1 : 0
-  
+
   tenant_id = data.hatchetcloud_tenant.production.id
   name      = "Active Tenant Token"
 }
@@ -57,7 +57,7 @@ variable "tenant_configs" {
 
 data "hatchetcloud_tenant" "environments" {
   for_each = var.tenant_configs
-  
+
   id              = each.value.tenant_id
   organization_id = each.value.organization_id
 }
@@ -68,7 +68,7 @@ resource "hatchetcloud_tenant_api_token" "environment_tokens" {
     for k, v in data.hatchetcloud_tenant.environments : k => v
     if v.status == "active"
   }
-  
+
   tenant_id = each.value.id
   name      = "Token for ${each.key} environment"
 }

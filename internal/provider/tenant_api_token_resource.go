@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	_ resource.Resource              = &TenantAPITokenResource{}
+	_ resource.Resource                = &TenantAPITokenResource{}
 	_ resource.ResourceWithImportState = &TenantAPITokenResource{}
 )
 
@@ -30,11 +30,11 @@ type TenantAPITokenResource struct {
 }
 
 type TenantAPITokenResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	TenantID    types.String `tfsdk:"tenant_id"`
-	Name        types.String `tfsdk:"name"`
-	ExpiresAt   types.String `tfsdk:"expires_at"`
-	Token       types.String `tfsdk:"token"`
+	ID        types.String `tfsdk:"id"`
+	TenantID  types.String `tfsdk:"tenant_id"`
+	Name      types.String `tfsdk:"name"`
+	ExpiresAt types.String `tfsdk:"expires_at"`
+	Token     types.String `tfsdk:"token"`
 }
 
 func (r *TenantAPITokenResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

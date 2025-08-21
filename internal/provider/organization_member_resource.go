@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	_ resource.Resource              = &OrganizationMemberResource{}
+	_ resource.Resource                = &OrganizationMemberResource{}
 	_ resource.ResourceWithImportState = &OrganizationMemberResource{}
 )
 

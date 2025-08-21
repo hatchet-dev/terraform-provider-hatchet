@@ -12,9 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-var (
-	_ provider.Provider = &HatchetCloudProvider{}
-)
+var _ provider.Provider = &HatchetCloudProvider{}
 
 type HatchetCloudProvider struct {
 	version string
@@ -57,7 +55,11 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 
 	endpoint := data.Endpoint.ValueString()
 	if endpoint == "" {
-		endpoint = "cloud.onhatchet.run"
+		if val, ok := os.LookupEnv("HATCHET_ENDPOINT"); ok {
+			endpoint = val
+		} else {
+			endpoint = "cloud.onhatchet.run"
+		}
 	}
 
 	token := data.Token.ValueString()
