@@ -2,8 +2,11 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -19,8 +22,7 @@ type HatchetCloudProvider struct {
 }
 
 type HatchetCloudProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
-	Token    types.String `tfsdk:"token"`
+	Token types.String `tfsdk:"token"`
 }
 
 func (p *HatchetCloudProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -31,10 +33,6 @@ func (p *HatchetCloudProvider) Metadata(ctx context.Context, req provider.Metada
 func (p *HatchetCloudProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Endpoint for the Hatchet Cloud instance",
-				Optional:            true,
-			},
 			"token": schema.StringAttribute{
 				MarkdownDescription: "Management token for the Hatchet Cloud instance. Can also be provided via HATCHET_TOKEN environment variable.",
 				Optional:            true,
@@ -53,18 +51,9 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	endpoint := data.Endpoint.ValueString()
-	if endpoint == "" {
-		if val, ok := os.LookupEnv("HATCHET_ENDPOINT"); ok {
-			endpoint = val
-		} else {
-			endpoint = "cloud.onhatchet.run"
-		}
-	}
-
-	token := data.Token.ValueString()
+	token := os.Getenv("HATCHET_TOKEN")
 	if token == "" {
-		token = os.Getenv("HATCHET_TOKEN")
+		token = data.Token.ValueString()
 	}
 
 	if token == "" {
@@ -77,19 +66,54 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
+	// Decode JWT to extract organization ID and endpoint
+	claims, err := decodeJWT(token)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Token",
+			"The provided token is not a valid JWT or cannot be decoded. "+
+				"Please ensure you are using a valid Hatchet Cloud management token.\n\n"+
+				"Error: "+err.Error(),
+		)
+		return
+	}
+
+	if claims.Sub == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Token Claims",
+			"The JWT token does not contain a valid organization ID (sub claim).",
+		)
+		return
+	}
+
+	if claims.ServerURL == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Token Claims",
+			"The JWT token does not contain a valid server URL.",
+		)
+		return
+	}
+
+	// Remove protocol from server URL if present and ensure it's just the host
+	endpoint := strings.TrimPrefix(strings.TrimPrefix(claims.ServerURL, "http://"), "https://")
+
 	client := &HatchetCloudClient{
-		Endpoint: endpoint,
-		Token:    token,
+		Endpoint:       endpoint,
+		Token:          token,
+		OrganizationID: claims.Sub,
 	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
 
-	tflog.Info(ctx, "Configured Hatchet Cloud client", map[string]any{"success": true})
+	tflog.Info(ctx, "Configured Hatchet Cloud client", map[string]any{
+		"success":         true,
+		"endpoint":        endpoint,
+		"organization_id": claims.Sub,
+	})
 }
 
 func (p *HatchetCloudProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewOrganizationResource,
 		NewTenantResource,
 		NewTenantAPITokenResource,
 		NewOrganizationMemberResource,
@@ -100,7 +124,6 @@ func (p *HatchetCloudProvider) DataSources(ctx context.Context) []func() datasou
 	return []func() datasource.DataSource{
 		NewOrganizationDataSource,
 		NewTenantDataSource,
-		NewOrganizationMembersDataSource,
 	}
 }
 
@@ -113,6 +136,30 @@ func New(version string) func() provider.Provider {
 }
 
 type HatchetCloudClient struct {
-	Endpoint string
-	Token    string
+	Endpoint       string
+	Token          string
+	OrganizationID string
+}
+
+// JWTClaims represents the structure of the JWT token
+type JWTClaims struct {
+	Sub       string `json:"sub"`        // Organization ID
+	ServerURL string `json:"server_url"` // Endpoint
+	jwt.RegisteredClaims
+}
+
+// decodeJWT decodes the JWT token and extracts organization ID and endpoint
+func decodeJWT(tokenString string) (*JWTClaims, error) {
+	// Parse the token without verification (we just need the claims)
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &JWTClaims{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JWT: %w", err)
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid JWT claims")
+	}
+
+	return claims, nil
 }

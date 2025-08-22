@@ -28,7 +28,7 @@ type TenantDataSource struct {
 
 type TenantDataSourceModel struct {
 	ID             types.String `tfsdk:"id"`
-	OrganizationID types.String `tfsdk:"organization_id"`
+	OrganizationID types.String `tfsdk:"org_id"`
 	Status         types.String `tfsdk:"status"`
 	ArchivedAt     types.String `tfsdk:"archived_at"`
 }
@@ -45,7 +45,7 @@ func (d *TenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 				MarkdownDescription: "The ID of the tenant.",
 				Required:            true,
 			},
-			"organization_id": schema.StringAttribute{
+			"org_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the organization this tenant belongs to.",
 				Required:            true,
 			},

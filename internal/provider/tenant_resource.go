@@ -31,7 +31,7 @@ type TenantResource struct {
 
 type TenantResourceModel struct {
 	ID             types.String `tfsdk:"id"`
-	OrganizationID types.String `tfsdk:"organization_id"`
+	OrganizationID types.String `tfsdk:"org_id"`
 	Name           types.String `tfsdk:"name"`
 	Slug           types.String `tfsdk:"slug"`
 	Status         types.String `tfsdk:"status"`
@@ -50,7 +50,7 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				MarkdownDescription: "The ID of the tenant.",
 				Computed:            true,
 			},
-			"organization_id": schema.StringAttribute{
+			"org_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the organization this tenant belongs to.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{

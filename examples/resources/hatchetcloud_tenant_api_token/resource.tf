@@ -17,9 +17,9 @@ data "hatchetcloud_organization" "existing" {
 }
 
 resource "hatchetcloud_tenant" "example" {
-  organization_id = data.hatchetcloud_organization.existing.id
-  name            = "Example Tenant"
-  slug            = "example"
+  org_id = data.hatchetcloud_organization.existing.id
+  name   = "Example Tenant"
+  slug   = "example"
 }
 
 # Create an API token for the tenant

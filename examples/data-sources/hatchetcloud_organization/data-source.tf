@@ -18,9 +18,9 @@ data "hatchetcloud_organization" "example" {
 
 # Use the organization data in other resources
 resource "hatchetcloud_tenant" "new_tenant" {
-  organization_id = data.hatchetcloud_organization.example.id
-  name            = "Tenant for ${data.hatchetcloud_organization.example.name}"
-  slug            = "new-tenant"
+  org_id = data.hatchetcloud_organization.example.id
+  name   = "Tenant for ${data.hatchetcloud_organization.example.name}"
+  slug   = "new-tenant"
 }
 
 # Use organization data for conditional logic
@@ -37,9 +37,9 @@ locals {
 resource "hatchetcloud_tenant" "conditional_tenant" {
   count = local.is_target_org ? 1 : 0
 
-  organization_id = data.hatchetcloud_organization.example.id
-  name            = "Conditional Tenant"
-  slug            = "conditional"
+  org_id = data.hatchetcloud_organization.example.id
+  name   = "Conditional Tenant"
+  slug   = "conditional"
 }
 
 # Output organization information
@@ -48,7 +48,7 @@ output "organization_name" {
   value       = data.hatchetcloud_organization.example.name
 }
 
-output "organization_id" {
+output "org_id" {
   description = "The ID of the organization"
   value       = data.hatchetcloud_organization.example.id
 }

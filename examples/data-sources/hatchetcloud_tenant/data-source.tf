@@ -18,8 +18,8 @@ data "hatchetcloud_organization" "existing" {
 
 # Fetch tenant information by ID and organization ID
 data "hatchetcloud_tenant" "production" {
-  id              = "87654321-4321-4321-4321-210987654321"
-  organization_id = data.hatchetcloud_organization.existing.id
+  id     = "87654321-4321-4321-4321-210987654321"
+  org_id = data.hatchetcloud_organization.existing.id
 }
 
 # Use tenant data to create API tokens
@@ -40,17 +40,17 @@ resource "hatchetcloud_tenant_api_token" "active_tenant_token" {
 variable "tenant_configs" {
   description = "Map of tenant configurations to look up"
   type = map(object({
-    tenant_id       = string
-    organization_id = string
+    tenant_id = string
+    org_id    = string
   }))
   default = {
     "prod" = {
-      tenant_id       = "87654321-4321-4321-4321-210987654321"
-      organization_id = "12345678-1234-1234-1234-123456789012"
+      tenant_id = "87654321-4321-4321-4321-210987654321"
+      org_id    = "12345678-1234-1234-1234-123456789012"
     }
     "staging" = {
-      tenant_id       = "11111111-2222-3333-4444-555555555555"
-      organization_id = "12345678-1234-1234-1234-123456789012"
+      tenant_id = "11111111-2222-3333-4444-555555555555"
+      org_id    = "12345678-1234-1234-1234-123456789012"
     }
   }
 }
@@ -58,8 +58,8 @@ variable "tenant_configs" {
 data "hatchetcloud_tenant" "environments" {
   for_each = var.tenant_configs
 
-  id              = each.value.tenant_id
-  organization_id = each.value.organization_id
+  id     = each.value.tenant_id
+  org_id = each.value.org_id
 }
 
 # Create API tokens for active tenants only

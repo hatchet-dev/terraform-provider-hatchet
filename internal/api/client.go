@@ -45,8 +45,8 @@ type APITokenList = externalRef0.ListAPITokensResponse
 
 // AddOrganizationMembersRequest defines model for AddOrganizationMembersRequest.
 type AddOrganizationMembersRequest struct {
-	// UserIds Array of user IDs to add to the organization
-	UserIds []openapi_types.UUID `json:"userIds"`
+	// Emails Array of user emails to add to the organization
+	Emails []openapi_types.Email `json:"emails"`
 }
 
 // CreateNewTenantForOrganizationRequest defines model for CreateNewTenantForOrganizationRequest.
@@ -64,13 +64,22 @@ type CreateTenantAPITokenRequest = externalRef0.CreateAPITokenRequest
 // CreateTenantAPITokenResponse defines model for CreateTenantAPITokenResponse.
 type CreateTenantAPITokenResponse = externalRef0.CreateAPITokenResponse
 
+// DeleteOrganizationMembersRequest defines model for DeleteOrganizationMembersRequest.
+type DeleteOrganizationMembersRequest struct {
+	// Emails Array of user emails to remove from the organization
+	Emails []openapi_types.Email `json:"emails"`
+}
+
 // Organization defines model for Organization.
 type Organization struct {
 	Members  []OrganizationMember `json:"members"`
 	Metadata APIResourceMeta      `json:"metadata"`
 
 	// Name Name of the organization
-	Name    string               `json:"name"`
+	Name string `json:"name"`
+
+	// Slug Unique slug of the organization
+	Slug    string               `json:"slug"`
 	Tenants []OrganizationTenant `json:"tenants"`
 }
 
@@ -113,6 +122,9 @@ type OrganizationTenantCreateApiTokenJSONRequestBody = CreateTenantAPITokenReque
 
 // OrganizationUpdateMembersJSONRequestBody defines body for OrganizationUpdateMembers for application/json ContentType.
 type OrganizationUpdateMembersJSONRequestBody = AddOrganizationMembersRequest
+
+// OrganizationUpdateRemoveMembersJSONRequestBody defines body for OrganizationUpdateRemoveMembers for application/json ContentType.
+type OrganizationUpdateRemoveMembersJSONRequestBody = DeleteOrganizationMembersRequest
 
 // OrganizationCreateTenantJSONRequestBody defines body for OrganizationCreateTenant for application/json ContentType.
 type OrganizationCreateTenantJSONRequestBody = CreateNewTenantForOrganizationRequest
@@ -190,12 +202,6 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// OrganizationMemberDelete request
-	OrganizationMemberDelete(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// OrganizationMemberGet request
-	OrganizationMemberGet(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// OrganizationTenantDelete request
 	OrganizationTenantDelete(ctx context.Context, organizationTenant openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -221,34 +227,15 @@ type ClientInterface interface {
 
 	OrganizationUpdateMembers(ctx context.Context, organization openapi_types.UUID, body OrganizationUpdateMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// OrganizationUpdateRemoveMembersWithBody request with any body
+	OrganizationUpdateRemoveMembersWithBody(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	OrganizationUpdateRemoveMembers(ctx context.Context, organization openapi_types.UUID, body OrganizationUpdateRemoveMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// OrganizationCreateTenantWithBody request with any body
 	OrganizationCreateTenantWithBody(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	OrganizationCreateTenant(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-}
-
-func (c *Client) OrganizationMemberDelete(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewOrganizationMemberDeleteRequest(c.Server, organizationMember)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) OrganizationMemberGet(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewOrganizationMemberGetRequest(c.Server, organizationMember)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
 }
 
 func (c *Client) OrganizationTenantDelete(ctx context.Context, organizationTenant openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -359,6 +346,30 @@ func (c *Client) OrganizationUpdateMembers(ctx context.Context, organization ope
 	return c.Client.Do(req)
 }
 
+func (c *Client) OrganizationUpdateRemoveMembersWithBody(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewOrganizationUpdateRemoveMembersRequestWithBody(c.Server, organization, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) OrganizationUpdateRemoveMembers(ctx context.Context, organization openapi_types.UUID, body OrganizationUpdateRemoveMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewOrganizationUpdateRemoveMembersRequest(c.Server, organization, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) OrganizationCreateTenantWithBody(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewOrganizationCreateTenantRequestWithBody(c.Server, organization, contentType, body)
 	if err != nil {
@@ -381,74 +392,6 @@ func (c *Client) OrganizationCreateTenant(ctx context.Context, organization open
 		return nil, err
 	}
 	return c.Client.Do(req)
-}
-
-// NewOrganizationMemberDeleteRequest generates requests for OrganizationMemberDelete
-func NewOrganizationMemberDeleteRequest(server string, organizationMember openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "organization-member", runtime.ParamLocationPath, organizationMember)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/management/organization-members/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewOrganizationMemberGetRequest generates requests for OrganizationMemberGet
-func NewOrganizationMemberGetRequest(server string, organizationMember openapi_types.UUID) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "organization-member", runtime.ParamLocationPath, organizationMember)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/management/organization-members/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
 }
 
 // NewOrganizationTenantDeleteRequest generates requests for OrganizationTenantDelete
@@ -722,6 +665,53 @@ func NewOrganizationUpdateMembersRequestWithBody(server string, organization ope
 	return req, nil
 }
 
+// NewOrganizationUpdateRemoveMembersRequest calls the generic OrganizationUpdateRemoveMembers builder with application/json body
+func NewOrganizationUpdateRemoveMembersRequest(server string, organization openapi_types.UUID, body OrganizationUpdateRemoveMembersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewOrganizationUpdateRemoveMembersRequestWithBody(server, organization, "application/json", bodyReader)
+}
+
+// NewOrganizationUpdateRemoveMembersRequestWithBody generates requests for OrganizationUpdateRemoveMembers with any type of body
+func NewOrganizationUpdateRemoveMembersRequestWithBody(server string, organization openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "organization", runtime.ParamLocationPath, organization)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/management/organizations/%s/remove-members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewOrganizationCreateTenantRequest calls the generic OrganizationCreateTenant builder with application/json body
 func NewOrganizationCreateTenantRequest(server string, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -812,12 +802,6 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// OrganizationMemberDeleteWithResponse request
-	OrganizationMemberDeleteWithResponse(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationMemberDeleteResponse, error)
-
-	// OrganizationMemberGetWithResponse request
-	OrganizationMemberGetWithResponse(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationMemberGetResponse, error)
-
 	// OrganizationTenantDeleteWithResponse request
 	OrganizationTenantDeleteWithResponse(ctx context.Context, organizationTenant openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationTenantDeleteResponse, error)
 
@@ -843,58 +827,15 @@ type ClientWithResponsesInterface interface {
 
 	OrganizationUpdateMembersWithResponse(ctx context.Context, organization openapi_types.UUID, body OrganizationUpdateMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationUpdateMembersResponse, error)
 
+	// OrganizationUpdateRemoveMembersWithBodyWithResponse request with any body
+	OrganizationUpdateRemoveMembersWithBodyWithResponse(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationUpdateRemoveMembersResponse, error)
+
+	OrganizationUpdateRemoveMembersWithResponse(ctx context.Context, organization openapi_types.UUID, body OrganizationUpdateRemoveMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationUpdateRemoveMembersResponse, error)
+
 	// OrganizationCreateTenantWithBodyWithResponse request with any body
 	OrganizationCreateTenantWithBodyWithResponse(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error)
 
 	OrganizationCreateTenantWithResponse(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error)
-}
-
-type OrganizationMemberDeleteResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *OrganizationMember
-	JSON400      *APIErrors
-	JSON403      *APIErrors
-}
-
-// Status returns HTTPResponse.Status
-func (r OrganizationMemberDeleteResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r OrganizationMemberDeleteResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type OrganizationMemberGetResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *OrganizationMember
-	JSON400      *APIErrors
-	JSON403      *APIErrors
-}
-
-// Status returns HTTPResponse.Status
-func (r OrganizationMemberGetResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r OrganizationMemberGetResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
 }
 
 type OrganizationTenantDeleteResponse struct {
@@ -1065,6 +1006,29 @@ func (r OrganizationUpdateMembersResponse) StatusCode() int {
 	return 0
 }
 
+type OrganizationUpdateRemoveMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *APIErrors
+	JSON403      *APIErrors
+}
+
+// Status returns HTTPResponse.Status
+func (r OrganizationUpdateRemoveMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r OrganizationUpdateRemoveMembersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type OrganizationCreateTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1087,24 +1051,6 @@ func (r OrganizationCreateTenantResponse) StatusCode() int {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
-}
-
-// OrganizationMemberDeleteWithResponse request returning *OrganizationMemberDeleteResponse
-func (c *ClientWithResponses) OrganizationMemberDeleteWithResponse(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationMemberDeleteResponse, error) {
-	rsp, err := c.OrganizationMemberDelete(ctx, organizationMember, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseOrganizationMemberDeleteResponse(rsp)
-}
-
-// OrganizationMemberGetWithResponse request returning *OrganizationMemberGetResponse
-func (c *ClientWithResponses) OrganizationMemberGetWithResponse(ctx context.Context, organizationMember openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationMemberGetResponse, error) {
-	rsp, err := c.OrganizationMemberGet(ctx, organizationMember, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseOrganizationMemberGetResponse(rsp)
 }
 
 // OrganizationTenantDeleteWithResponse request returning *OrganizationTenantDeleteResponse
@@ -1186,6 +1132,23 @@ func (c *ClientWithResponses) OrganizationUpdateMembersWithResponse(ctx context.
 	return ParseOrganizationUpdateMembersResponse(rsp)
 }
 
+// OrganizationUpdateRemoveMembersWithBodyWithResponse request with arbitrary body returning *OrganizationUpdateRemoveMembersResponse
+func (c *ClientWithResponses) OrganizationUpdateRemoveMembersWithBodyWithResponse(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationUpdateRemoveMembersResponse, error) {
+	rsp, err := c.OrganizationUpdateRemoveMembersWithBody(ctx, organization, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseOrganizationUpdateRemoveMembersResponse(rsp)
+}
+
+func (c *ClientWithResponses) OrganizationUpdateRemoveMembersWithResponse(ctx context.Context, organization openapi_types.UUID, body OrganizationUpdateRemoveMembersJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationUpdateRemoveMembersResponse, error) {
+	rsp, err := c.OrganizationUpdateRemoveMembers(ctx, organization, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseOrganizationUpdateRemoveMembersResponse(rsp)
+}
+
 // OrganizationCreateTenantWithBodyWithResponse request with arbitrary body returning *OrganizationCreateTenantResponse
 func (c *ClientWithResponses) OrganizationCreateTenantWithBodyWithResponse(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error) {
 	rsp, err := c.OrganizationCreateTenantWithBody(ctx, organization, contentType, body, reqEditors...)
@@ -1201,86 +1164,6 @@ func (c *ClientWithResponses) OrganizationCreateTenantWithResponse(ctx context.C
 		return nil, err
 	}
 	return ParseOrganizationCreateTenantResponse(rsp)
-}
-
-// ParseOrganizationMemberDeleteResponse parses an HTTP response from a OrganizationMemberDeleteWithResponse call
-func ParseOrganizationMemberDeleteResponse(rsp *http.Response) (*OrganizationMemberDeleteResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &OrganizationMemberDeleteResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest OrganizationMember
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseOrganizationMemberGetResponse parses an HTTP response from a OrganizationMemberGetWithResponse call
-func ParseOrganizationMemberGetResponse(rsp *http.Response) (*OrganizationMemberGetResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &OrganizationMemberGetResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest OrganizationMember
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON403 = &dest
-
-	}
-
-	return response, nil
 }
 
 // ParseOrganizationTenantDeleteResponse parses an HTTP response from a OrganizationTenantDeleteWithResponse call
@@ -1557,6 +1440,39 @@ func ParseOrganizationUpdateMembersResponse(rsp *http.Response) (*OrganizationUp
 			return nil, err
 		}
 		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseOrganizationUpdateRemoveMembersResponse parses an HTTP response from a OrganizationUpdateRemoveMembersWithResponse call
+func ParseOrganizationUpdateRemoveMembersResponse(rsp *http.Response) (*OrganizationUpdateRemoveMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &OrganizationUpdateRemoveMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest APIErrors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest APIErrors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	}
 
