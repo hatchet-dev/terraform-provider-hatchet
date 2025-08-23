@@ -26,16 +26,16 @@ func NewTenantResource() resource.Resource {
 }
 
 type TenantResource struct {
-	client *managementclient.ClientWithResponses
+	client         *managementclient.ClientWithResponses
+	organizationID string
 }
 
 type TenantResourceModel struct {
-	ID             types.String `tfsdk:"id"`
-	OrganizationID types.String `tfsdk:"org_id"`
-	Name           types.String `tfsdk:"name"`
-	Slug           types.String `tfsdk:"slug"`
-	Status         types.String `tfsdk:"status"`
-	ArchivedAt     types.String `tfsdk:"archived_at"`
+	ID         types.String `tfsdk:"id"`
+	Name       types.String `tfsdk:"name"`
+	Slug       types.String `tfsdk:"slug"`
+	Status     types.String `tfsdk:"status"`
+	ArchivedAt types.String `tfsdk:"archived_at"`
 }
 
 func (r *TenantResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -49,13 +49,6 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the tenant.",
 				Computed:            true,
-			},
-			"org_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the organization this tenant belongs to.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the tenant.",
@@ -112,6 +105,7 @@ func (r *TenantResource) Configure(ctx context.Context, req resource.ConfigureRe
 	}
 
 	r.client = apiClient
+	r.organizationID = client.OrganizationID
 }
 
 func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -122,9 +116,9 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	orgID, err := uuid.Parse(data.OrganizationID.ValueString())
+	orgID, err := uuid.Parse(r.organizationID)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid Organization ID", err.Error())
+		resp.Diagnostics.AddError("Invalid Organization ID from token", err.Error())
 		return
 	}
 
@@ -139,7 +133,7 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	if tenantResp.StatusCode() != 201 {
+	if tenantResp.StatusCode() < 200 || tenantResp.StatusCode() >= 300 {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to create tenant, got status: %d", tenantResp.StatusCode()))
 		return
 	}
@@ -168,9 +162,9 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	orgID, err := uuid.Parse(data.OrganizationID.ValueString())
+	orgID, err := uuid.Parse(r.organizationID)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid Organization ID", err.Error())
+		resp.Diagnostics.AddError("Invalid Organization ID from token", err.Error())
 		return
 	}
 
@@ -180,7 +174,7 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	if orgResp.StatusCode() != 200 || orgResp.JSON200 == nil {
+	if orgResp.StatusCode() < 200 || orgResp.StatusCode() >= 300 || orgResp.JSON200 == nil {
 		resp.Diagnostics.AddError("API Error", "Organization not found")
 		return
 	}
@@ -241,7 +235,7 @@ func (r *TenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	if deleteResp.StatusCode() != 200 {
+	if deleteResp.StatusCode() < 200 || deleteResp.StatusCode() >= 300 {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete tenant, got status: %d", deleteResp.StatusCode()))
 		return
 	}

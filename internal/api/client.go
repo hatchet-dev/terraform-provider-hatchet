@@ -34,8 +34,8 @@ const (
 	Archived TenantStatus = "archived"
 )
 
-// APIErrors defines model for APIErrors.
-type APIErrors = externalRef0.APIErrors
+// APIError defines model for APIError.
+type APIError = externalRef0.APIError
 
 // APIResourceMeta defines model for APIResourceMeta.
 type APIResourceMeta = externalRef0.APIResourceMeta
@@ -45,8 +45,8 @@ type APITokenList = externalRef0.ListAPITokensResponse
 
 // AddOrganizationMembersRequest defines model for AddOrganizationMembersRequest.
 type AddOrganizationMembersRequest struct {
-	// Emails Array of user emails to add to the organization
-	Emails []openapi_types.Email `json:"emails"`
+	// UserIds Array of user IDs to add to the organization
+	UserIds []openapi_types.UUID `json:"userIds"`
 }
 
 // CreateNewTenantForOrganizationRequest defines model for CreateNewTenantForOrganizationRequest.
@@ -63,12 +63,6 @@ type CreateTenantAPITokenRequest = externalRef0.CreateAPITokenRequest
 
 // CreateTenantAPITokenResponse defines model for CreateTenantAPITokenResponse.
 type CreateTenantAPITokenResponse = externalRef0.CreateAPITokenResponse
-
-// DeleteOrganizationMembersRequest defines model for DeleteOrganizationMembersRequest.
-type DeleteOrganizationMembersRequest struct {
-	// Emails Array of user emails to remove from the organization
-	Emails []openapi_types.Email `json:"emails"`
-}
 
 // Organization defines model for Organization.
 type Organization struct {
@@ -114,8 +108,29 @@ type OrganizationTenant struct {
 // PaginationResponse defines model for PaginationResponse.
 type PaginationResponse = externalRef0.PaginationResponse
 
+// RemoveOrganizationMembersRequest defines model for RemoveOrganizationMembersRequest.
+type RemoveOrganizationMembersRequest struct {
+	// UserIds Array of user IDs to remove from the organization
+	UserIds []openapi_types.UUID `json:"userIds"`
+}
+
 // TenantStatus defines model for TenantStatus.
 type TenantStatus string
+
+// User defines model for User.
+type User struct {
+	// Email Email of the user
+	Email openapi_types.Email `json:"email"`
+
+	// Id ID of the user
+	Id openapi_types.UUID `json:"id"`
+}
+
+// UserGetParams defines parameters for UserGet.
+type UserGetParams struct {
+	// Email The user email
+	Email string `form:"email" json:"email"`
+}
 
 // OrganizationTenantCreateApiTokenJSONRequestBody defines body for OrganizationTenantCreateApiToken for application/json ContentType.
 type OrganizationTenantCreateApiTokenJSONRequestBody = CreateTenantAPITokenRequest
@@ -124,7 +139,7 @@ type OrganizationTenantCreateApiTokenJSONRequestBody = CreateTenantAPITokenReque
 type OrganizationUpdateMembersJSONRequestBody = AddOrganizationMembersRequest
 
 // OrganizationUpdateRemoveMembersJSONRequestBody defines body for OrganizationUpdateRemoveMembers for application/json ContentType.
-type OrganizationUpdateRemoveMembersJSONRequestBody = DeleteOrganizationMembersRequest
+type OrganizationUpdateRemoveMembersJSONRequestBody = RemoveOrganizationMembersRequest
 
 // OrganizationCreateTenantJSONRequestBody defines body for OrganizationCreateTenant for application/json ContentType.
 type OrganizationCreateTenantJSONRequestBody = CreateNewTenantForOrganizationRequest
@@ -236,6 +251,9 @@ type ClientInterface interface {
 	OrganizationCreateTenantWithBody(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	OrganizationCreateTenant(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UserGet request
+	UserGet(ctx context.Context, params *UserGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) OrganizationTenantDelete(ctx context.Context, organizationTenant openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -384,6 +402,18 @@ func (c *Client) OrganizationCreateTenantWithBody(ctx context.Context, organizat
 
 func (c *Client) OrganizationCreateTenant(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewOrganizationCreateTenantRequest(c.Server, organization, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UserGet(ctx context.Context, params *UserGetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUserGetRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -759,6 +789,51 @@ func NewOrganizationCreateTenantRequestWithBody(server string, organization open
 	return req, nil
 }
 
+// NewUserGetRequest generates requests for UserGet
+func NewUserGetRequest(server string, params *UserGetParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/management/user")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "email", runtime.ParamLocationQuery, params.Email); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -836,14 +911,17 @@ type ClientWithResponsesInterface interface {
 	OrganizationCreateTenantWithBodyWithResponse(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error)
 
 	OrganizationCreateTenantWithResponse(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error)
+
+	// UserGetWithResponse request
+	UserGetWithResponse(ctx context.Context, params *UserGetParams, reqEditors ...RequestEditorFn) (*UserGetResponse, error)
 }
 
 type OrganizationTenantDeleteResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *OrganizationTenant
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -866,8 +944,8 @@ type OrganizationTenantListApiTokensResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *APITokenList
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -890,8 +968,8 @@ type OrganizationTenantCreateApiTokenResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *CreateTenantAPITokenResponse
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -913,8 +991,8 @@ func (r OrganizationTenantCreateApiTokenResponse) StatusCode() int {
 type OrganizationTenantDeleteApiTokenResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -937,8 +1015,8 @@ type OrganizationGetResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Organization
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -961,8 +1039,8 @@ type OrganizationListMembersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *OrganizationMemberList
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -985,9 +1063,9 @@ type OrganizationUpdateMembersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *OrganizationMemberList
-	JSON400      *APIErrors
-	JSON403      *APIErrors
-	JSON409      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
+	JSON409      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -1009,8 +1087,8 @@ func (r OrganizationUpdateMembersResponse) StatusCode() int {
 type OrganizationUpdateRemoveMembersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -1033,8 +1111,8 @@ type OrganizationCreateTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *OrganizationTenant
-	JSON400      *APIErrors
-	JSON403      *APIErrors
+	JSON400      *APIError
+	JSON403      *APIError
 }
 
 // Status returns HTTPResponse.Status
@@ -1047,6 +1125,30 @@ func (r OrganizationCreateTenantResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r OrganizationCreateTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UserGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *User
+	JSON400      *APIError
+	JSON403      *APIError
+}
+
+// Status returns HTTPResponse.Status
+func (r UserGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UserGetResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -1166,6 +1268,15 @@ func (c *ClientWithResponses) OrganizationCreateTenantWithResponse(ctx context.C
 	return ParseOrganizationCreateTenantResponse(rsp)
 }
 
+// UserGetWithResponse request returning *UserGetResponse
+func (c *ClientWithResponses) UserGetWithResponse(ctx context.Context, params *UserGetParams, reqEditors ...RequestEditorFn) (*UserGetResponse, error) {
+	rsp, err := c.UserGet(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUserGetResponse(rsp)
+}
+
 // ParseOrganizationTenantDeleteResponse parses an HTTP response from a OrganizationTenantDeleteWithResponse call
 func ParseOrganizationTenantDeleteResponse(rsp *http.Response) (*OrganizationTenantDeleteResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -1188,14 +1299,14 @@ func ParseOrganizationTenantDeleteResponse(rsp *http.Response) (*OrganizationTen
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1228,14 +1339,14 @@ func ParseOrganizationTenantListApiTokensResponse(rsp *http.Response) (*Organiza
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1268,14 +1379,14 @@ func ParseOrganizationTenantCreateApiTokenResponse(rsp *http.Response) (*Organiz
 		response.JSON201 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1301,14 +1412,14 @@ func ParseOrganizationTenantDeleteApiTokenResponse(rsp *http.Response) (*Organiz
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1341,14 +1452,14 @@ func ParseOrganizationGetResponse(rsp *http.Response) (*OrganizationGetResponse,
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1381,14 +1492,14 @@ func ParseOrganizationListMembersResponse(rsp *http.Response) (*OrganizationList
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1421,21 +1532,21 @@ func ParseOrganizationUpdateMembersResponse(rsp *http.Response) (*OrganizationUp
 		response.JSON201 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1461,14 +1572,14 @@ func ParseOrganizationUpdateRemoveMembersResponse(rsp *http.Response) (*Organiza
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1501,14 +1612,54 @@ func ParseOrganizationCreateTenantResponse(rsp *http.Response) (*OrganizationCre
 		response.JSON201 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest APIErrors
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
-		var dest APIErrors
+		var dest APIError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUserGetResponse parses an HTTP response from a UserGetWithResponse call
+func ParseUserGetResponse(rsp *http.Response) (*UserGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UserGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest User
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest APIError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest APIError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

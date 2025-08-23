@@ -1,31 +1,50 @@
 # hatchetcloud_organization_member (Resource)
 
-Manages a Hatchet organization member.
+Manages a Hatchet organization member by adding multiple users via their email addresses.
 
 ## Example Usage
 
 ```terraform
-# Add a user to an organization
-resource "hatchetcloud_organization_member" "example" {
-  organization_id = hatchetcloud_organization.example.id
-  user_id         = "87654321-4321-4321-4321-210987654321"
-}
-
-# Add multiple members using for_each
-variable "member_user_ids" {
-  description = "List of user IDs to add as organization members"
-  type        = list(string)
-  default = [
-    "87654321-4321-4321-4321-210987654321",
-    "11111111-2222-3333-4444-555555555555"
+# Add multiple users to an organization using email addresses
+resource "hatchetcloud_organization_member" "team_members" {
+  emails = [
+    "admin@company.com",
+    "developer1@company.com", 
+    "developer2@company.com"
   ]
 }
 
-resource "hatchetcloud_organization_member" "members" {
-  for_each = toset(var.member_user_ids)
+# Add members using variables
+variable "organization_member_emails" {
+  description = "List of email addresses to add as organization members"
+  type        = list(string)
+  default = [
+    "user1@example.com",
+    "user2@example.com"
+  ]
+}
+
+resource "hatchetcloud_organization_member" "variable_members" {
+  emails = var.organization_member_emails
+}
+
+# Conditional email addition
+locals {
+  base_emails = [
+    "employee1@company.com",
+    "employee2@company.com"
+  ]
   
-  organization_id = data.hatchetcloud_organization.existing.id
-  user_id         = each.value
+  contractor_emails = [
+    "contractor1@external.com",
+    "contractor2@external.com"
+  ]
+  
+  all_emails = var.include_contractors ? concat(local.base_emails, local.contractor_emails) : local.base_emails
+}
+
+resource "hatchetcloud_organization_member" "conditional_members" {
+  emails = local.all_emails
 }
 ```
 
@@ -33,27 +52,22 @@ resource "hatchetcloud_organization_member" "members" {
 
 ### Required
 
-- `organization_id` (String) The ID of the organization.
-- `user_id` (String) The ID of the user to add as a member.
-
-### Read-Only
-
-- `id` (String) The ID of the organization member.
-- `member_type` (String) The type of member (typically "OWNER").
+- `emails` (List of String) List of email addresses of users to add as members.
 
 ## Import
 
 Import is supported using the following syntax:
 
 ```shell
-terraform import hatchetcloud_organization_member.example 12345678-1234-1234-1234-123456789012
+terraform import hatchetcloud_organization_member.example organization
 ```
 
-Where `12345678-1234-1234-1234-123456789012` is the organization member ID.
+The organization ID is automatically determined from the JWT token.
 
 ## Notes
 
-- The `organization_id` and `user_id` cannot be changed after creation. Changing these values will force a new resource to be created.
-- Member type and permissions cannot be modified through this resource - they are determined by the Hatchet Cloud system.
-- When a member is removed, they will lose access to the organization and all its tenants.
-- Users must already exist in the Hatchet Cloud system before they can be added as organization members.
+- The organization is automatically determined from the JWT token provided to the provider.
+- The resource manages all the specified email addresses as a group.
+- Users will be invited via email if they don't already exist in the Hatchet Cloud system.
+- When the resource is destroyed, the specified users will be removed from the organization.
+- Email addresses must be valid email format.

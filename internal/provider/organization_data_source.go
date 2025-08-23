@@ -110,7 +110,7 @@ func (d *OrganizationDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	if orgResp.StatusCode() != 200 {
+	if orgResp.StatusCode() < 200 || orgResp.StatusCode() >= 300 {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to read organization, got status: %d", orgResp.StatusCode()))
 		return
 	}

@@ -8,7 +8,7 @@ build:
 
 # Install the provider locally using goreleaser
 install:
-	goreleaser build --single-target --snapshot --clean
+	GORELEASER_CURRENT_TAG=v$(VERSION) goreleaser build --single-target --snapshot --clean
 	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchetcloud/$(VERSION)/$$(go env GOOS)_$$(go env GOARCH)
 	cp ./dist/terraform-provider-hatchetcloud_$$(go env GOOS)_$$(go env GOARCH)*/terraform-provider-hatchetcloud ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchetcloud/$(VERSION)/$$(go env GOOS)_$$(go env GOARCH)/
 

@@ -6,21 +6,35 @@ Manages a Hatchet tenant within an organization.
 
 ```terraform
 # Create a new tenant
-resource "hatchetcloud_tenant" "example" {
-  organization_id = hatchetcloud_organization.example.id
-  name           = "Production Environment"
-  slug           = "prod"
+resource "hatchetcloud_tenant" "production" {
+  name = "Production Environment"
+  slug = "prod"
 }
 
-# Reference an existing organization
-data "hatchetcloud_organization" "existing" {
-  id = "12345678-1234-1234-1234-123456789012"
+# Create multiple tenants using for_each
+variable "environments" {
+  description = "Map of environments to create"
+  type = map(object({
+    name = string
+    slug = string
+  }))
+  default = {
+    "staging" = {
+      name = "Staging Environment"
+      slug = "staging"
+    }
+    "development" = {
+      name = "Development Environment"
+      slug = "dev"
+    }
+  }
 }
 
-resource "hatchetcloud_tenant" "staging" {
-  organization_id = data.hatchetcloud_organization.existing.id
-  name           = "Staging Environment"
-  slug           = "staging"
+resource "hatchetcloud_tenant" "environments" {
+  for_each = var.environments
+
+  name = each.value.name
+  slug = each.value.slug
 }
 ```
 
@@ -29,7 +43,6 @@ resource "hatchetcloud_tenant" "staging" {
 ### Required
 
 - `name` (String) The name of the tenant.
-- `organization_id` (String) The ID of the organization this tenant belongs to.
 - `slug` (String) The slug of the tenant. This must be unique within the organization.
 
 ### Read-Only
@@ -50,6 +63,7 @@ Where `12345678-1234-1234-1234-123456789012` is the tenant ID.
 
 ## Notes
 
-- The `slug` and `organization_id` cannot be changed after creation. Changing these values will force a new resource to be created.
+- The organization is automatically determined from the JWT token provided to the provider.
+- The `slug` cannot be changed after creation. Changing this value will force a new resource to be created.
 - Tenant updates (name changes) are not currently supported through the API.
 - When a tenant is deleted, it will be permanently removed from the organization.

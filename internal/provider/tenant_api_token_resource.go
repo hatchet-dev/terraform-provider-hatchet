@@ -142,7 +142,7 @@ func (r *TenantAPITokenResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	if tokenResp.StatusCode() != 201 {
+	if tokenResp.StatusCode() < 200 || tokenResp.StatusCode() >= 300 {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to create API token, got status: %d", tokenResp.StatusCode()))
 		return
 	}
@@ -178,7 +178,7 @@ func (r *TenantAPITokenResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	if tokensResp.StatusCode() != 200 || tokensResp.JSON200 == nil {
+	if tokensResp.StatusCode() < 200 || tokensResp.StatusCode() >= 300 || tokensResp.JSON200 == nil {
 		resp.Diagnostics.AddError("API Error", "Unable to read API tokens")
 		return
 	}
@@ -239,7 +239,7 @@ func (r *TenantAPITokenResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	if deleteResp.StatusCode() != 200 {
+	if deleteResp.StatusCode() < 200 || deleteResp.StatusCode() >= 300 {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete API token, got status: %d", deleteResp.StatusCode()))
 		return
 	}

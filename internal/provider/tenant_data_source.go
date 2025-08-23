@@ -23,14 +23,14 @@ func NewTenantDataSource() datasource.DataSource {
 }
 
 type TenantDataSource struct {
-	client *managementclient.ClientWithResponses
+	client         *managementclient.ClientWithResponses
+	organizationID string
 }
 
 type TenantDataSourceModel struct {
-	ID             types.String `tfsdk:"id"`
-	OrganizationID types.String `tfsdk:"org_id"`
-	Status         types.String `tfsdk:"status"`
-	ArchivedAt     types.String `tfsdk:"archived_at"`
+	ID         types.String `tfsdk:"id"`
+	Status     types.String `tfsdk:"status"`
+	ArchivedAt types.String `tfsdk:"archived_at"`
 }
 
 func (d *TenantDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -43,10 +43,6 @@ func (d *TenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the tenant.",
-				Required:            true,
-			},
-			"org_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the organization this tenant belongs to.",
 				Required:            true,
 			},
 			"status": schema.StringAttribute{
@@ -93,6 +89,7 @@ func (d *TenantDataSource) Configure(ctx context.Context, req datasource.Configu
 	}
 
 	d.client = apiClient
+	d.organizationID = client.OrganizationID
 }
 
 func (d *TenantDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -103,9 +100,9 @@ func (d *TenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	orgID, err := uuid.Parse(data.OrganizationID.ValueString())
+	orgID, err := uuid.Parse(d.organizationID)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid Organization ID", err.Error())
+		resp.Diagnostics.AddError("Invalid Organization ID from token", err.Error())
 		return
 	}
 
@@ -121,7 +118,7 @@ func (d *TenantDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	if orgResp.StatusCode() != 200 || orgResp.JSON200 == nil {
+	if orgResp.StatusCode() < 200 || orgResp.StatusCode() >= 300 || orgResp.JSON200 == nil {
 		resp.Diagnostics.AddError("API Error", "Organization not found")
 		return
 	}
