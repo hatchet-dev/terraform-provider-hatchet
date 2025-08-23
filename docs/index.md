@@ -60,8 +60,7 @@ The token can be provided in several ways:
 ## JWT Token Format
 
 The management token is a JWT that contains:
-- `sub`: Organization ID 
-- `server_url`: Hatchet Cloud endpoint
+- `sub`: Organization ID
 - Standard JWT claims (exp, iat, etc.)
 
 The provider automatically extracts these values from the token.

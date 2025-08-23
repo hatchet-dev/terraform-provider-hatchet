@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -63,13 +62,7 @@ func (r *OrganizationMembersResource) Configure(ctx context.Context, req resourc
 		return
 	}
 
-	apiClient, err := managementclient.NewClientWithResponses(
-		fmt.Sprintf("https://%s", client.Endpoint),
-		managementclient.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.Token))
-			return nil
-		}),
-	)
+	apiClient, err := createAPIClient(client.Endpoint, client.Token, client.ProviderVersion)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create API Client",
@@ -104,7 +97,6 @@ func (r *OrganizationMembersResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Convert types.String slice to openapi_types.Email slice
 	var userIdsSlice []openapi_types.UUID
 	for _, userId := range userIds {
 		userIdsSlice = append(userIdsSlice, openapi_types.UUID(uuid.MustParse(userId.ValueString())))
@@ -116,12 +108,12 @@ func (r *OrganizationMembersResource) Create(ctx context.Context, req resource.C
 
 	memberResp, err := r.client.OrganizationUpdateMembersWithResponse(ctx, orgID, addReq)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to add organization member, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to add organization members, got error: %s", err))
 		return
 	}
 
 	if memberResp.StatusCode() < 200 || memberResp.StatusCode() >= 300 {
-		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to add organization member, got status: %d", memberResp.StatusCode()))
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to add organization members, got status: %d", memberResp.StatusCode()))
 		return
 	}
 
@@ -129,8 +121,6 @@ func (r *OrganizationMembersResource) Create(ctx context.Context, req resource.C
 		resp.Diagnostics.AddError("API Error", "Member addition failed")
 		return
 	}
-
-	// No ID needed since we're managing emails as a group
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -160,17 +150,89 @@ func (r *OrganizationMembersResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	// Since we're managing emails as a group, we just need to verify the organization exists
-	// The actual member list is managed through the emails field
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *OrganizationMembersResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Update Not Supported",
-		"Organization member update is not supported. Members are immutable once added.",
-	)
+	var planData OrganizationMembersResourceModel
+	var stateData OrganizationMembersResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planData)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	orgID, err := uuid.Parse(r.organizationID)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Organization ID from token", err.Error())
+		return
+	}
+
+	// Convert current state and planned user IDs to sets for comparison
+	stateUserIds := make(map[string]bool)
+	for _, userId := range stateData.UserIds {
+		stateUserIds[userId.ValueString()] = true
+	}
+
+	planUserIds := make(map[string]bool)
+	for _, userId := range planData.UserIds {
+		planUserIds[userId.ValueString()] = true
+	}
+
+	// Find users to add (in plan but not in state)
+	var usersToAdd []openapi_types.UUID
+	for _, userId := range planData.UserIds {
+		userIdStr := userId.ValueString()
+		if !stateUserIds[userIdStr] {
+			usersToAdd = append(usersToAdd, openapi_types.UUID(uuid.MustParse(userIdStr)))
+		}
+	}
+
+	// Find users to remove (in state but not in plan)
+	var usersToRemove []openapi_types.UUID
+	for _, userId := range stateData.UserIds {
+		userIdStr := userId.ValueString()
+		if !planUserIds[userIdStr] {
+			usersToRemove = append(usersToRemove, openapi_types.UUID(uuid.MustParse(userIdStr)))
+		}
+	}
+
+	// Add new members if any
+	if len(usersToAdd) > 0 {
+		addReq := managementclient.AddOrganizationMembersRequest{
+			UserIds: usersToAdd,
+		}
+
+		addResp, err := r.client.OrganizationUpdateMembersWithResponse(ctx, orgID, addReq)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to add organization members, got error: %s", err))
+			return
+		}
+
+		if addResp.StatusCode() < 200 || addResp.StatusCode() >= 300 {
+			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to add organization members, got status: %d", addResp.StatusCode()))
+			return
+		}
+	}
+
+	// Remove members if any
+	if len(usersToRemove) > 0 {
+		removeResp, err := r.client.OrganizationUpdateRemoveMembersWithResponse(ctx, orgID, managementclient.OrganizationUpdateRemoveMembersJSONRequestBody{
+			UserIds: usersToRemove,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to remove organization members, got error: %s", err))
+			return
+		}
+
+		if removeResp.StatusCode() < 200 || removeResp.StatusCode() >= 300 {
+			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to remove organization members, got status: %d", removeResp.StatusCode()))
+			return
+		}
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &planData)...)
 }
 
 func (r *OrganizationMembersResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

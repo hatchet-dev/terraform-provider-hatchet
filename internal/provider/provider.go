@@ -3,8 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	managementclient "github.com/hatchet-dev/terraform-provider-hatchetcloud/internal/api"
 )
 
 var _ provider.Provider = &HatchetCloudProvider{}
@@ -86,21 +87,21 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	if claims.ServerURL == "" {
+	if claims.Issuer == "" {
 		resp.Diagnostics.AddError(
 			"Invalid Token Claims",
-			"The JWT token does not contain a valid server URL.",
+			"The JWT token does not contain a valid issuer.",
 		)
 		return
 	}
 
-	// Remove protocol from server URL if present and ensure it's just the host
-	endpoint := strings.TrimPrefix(strings.TrimPrefix(claims.ServerURL, "http://"), "https://")
+	endpoint := claims.Issuer
 
 	client := &HatchetCloudClient{
-		Endpoint:       endpoint,
-		Token:          token,
-		OrganizationID: claims.Sub,
+		Endpoint:        endpoint,
+		Token:           token,
+		OrganizationID:  claims.Sub,
+		ProviderVersion: p.version,
 	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
@@ -137,15 +138,15 @@ func New(version string) func() provider.Provider {
 }
 
 type HatchetCloudClient struct {
-	Endpoint       string
-	Token          string
-	OrganizationID string
+	Endpoint        string
+	Token           string
+	OrganizationID  string
+	ProviderVersion string
 }
 
 // JWTClaims represents the structure of the JWT token
 type JWTClaims struct {
-	Sub       string `json:"sub"`        // Organization ID
-	ServerURL string `json:"server_url"` // Endpoint
+	Sub string `json:"sub"` // Organization ID
 	jwt.RegisteredClaims
 }
 
@@ -163,4 +164,16 @@ func decodeJWT(tokenString string) (*JWTClaims, error) {
 	}
 
 	return claims, nil
+}
+
+// createAPIClient creates a new API client with proper headers
+func createAPIClient(endpoint, token, providerVersion string) (*managementclient.ClientWithResponses, error) {
+	return managementclient.NewClientWithResponses(
+		endpoint,
+		managementclient.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+			req.Header.Set("User-Agent", fmt.Sprintf("terraform-provider-hatchetcloud/%s", providerVersion))
+			return nil
+		}),
+	)
 }

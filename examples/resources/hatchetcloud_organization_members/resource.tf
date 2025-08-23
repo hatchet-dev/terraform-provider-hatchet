@@ -12,26 +12,18 @@ provider "hatchetcloud" {
 }
 
 # Look up users by email first
-data "hatchetcloud_user" "admin" {
+data "hatchetcloud_user" "user1" {
   email = "admin@example.com"
 }
 
-data "hatchetcloud_user" "developer" {
-  email = "developer@example.com"
+data "hatchetcloud_user" "user2" {
+  email = "testadmin@example.com"
 }
 
 # Add multiple users to the organization using their user IDs
 resource "hatchetcloud_organization_members" "team_members" {
   user_ids = [
-    data.hatchetcloud_user.admin.id,
-    data.hatchetcloud_user.developer.id
-  ]
-}
-
-# Alternative: Add users directly using known user IDs
-resource "hatchetcloud_organization_members" "direct_members" {
-  user_ids = [
-    "12345678-1234-1234-1234-123456789012",
-    "87654321-4321-4321-4321-210987654321"
+    data.hatchetcloud_user.user1.id,
+    data.hatchetcloud_user.user2.id
   ]
 }

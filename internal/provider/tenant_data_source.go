@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -71,13 +70,7 @@ func (d *TenantDataSource) Configure(ctx context.Context, req datasource.Configu
 		return
 	}
 
-	apiClient, err := managementclient.NewClientWithResponses(
-		fmt.Sprintf("https://%s", client.Endpoint),
-		managementclient.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.Token))
-			return nil
-		}),
-	)
+	apiClient, err := createAPIClient(client.Endpoint, client.Token, client.ProviderVersion)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create API Client",

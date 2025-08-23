@@ -13,11 +13,10 @@ provider "hatchetcloud" {
 
 # Fetch tenant information by ID
 data "hatchetcloud_tenant" "production" {
-  id = "87654321-4321-4321-4321-210987654321"
+  id = "707d0855-80ab-4e1f-a156-f1c4546cbf52"
 }
 
-# Use tenant data to create API tokens
-resource "hatchetcloud_tenant_api_token" "production_api_token" {
-  tenant_id = data.hatchetcloud_tenant.production.id
-  name      = "API Token for Production Tenant"
+# Output the tenant slug for reference
+output "tenant_status" {
+  value = data.hatchetcloud_tenant.production.status
 }

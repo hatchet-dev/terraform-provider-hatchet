@@ -13,15 +13,10 @@ provider "hatchetcloud" {
 
 # Fetch user information by email
 data "hatchetcloud_user" "example_user" {
-  email = "user@example.com"
+  email = "admin@example.com"
 }
 
 # Output the user ID for reference in other resources
 output "user_id" {
   value = data.hatchetcloud_user.example_user.id
-}
-
-# Use the user data when managing organization members
-resource "hatchetcloud_organization_member" "members" {
-  emails = [data.hatchetcloud_user.example_user.email]
 }

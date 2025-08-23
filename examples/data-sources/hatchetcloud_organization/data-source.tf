@@ -13,11 +13,10 @@ provider "hatchetcloud" {
 
 # Fetch organization information by ID
 data "hatchetcloud_organization" "example" {
-  id = "12345678-1234-1234-1234-123456789012"
+  id = "17015348-d740-45f2-b23d-ea284c6eb3ee"
 }
 
-# Use the organization data to create a tenant
-resource "hatchetcloud_tenant" "new_tenant" {
-  name = "Tenant for ${data.hatchetcloud_organization.example.name}"
-  slug = "new-tenant"
+# Output the organization slug
+output "organization_slug" {
+  value = data.hatchetcloud_organization.example.slug
 }
