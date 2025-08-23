@@ -127,6 +127,11 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	if tenantResp.StatusCode() < 200 || tenantResp.StatusCode() >= 300 {
+		if tenantResp.JSON400 != nil && tenantResp.JSON400.Description == "tenant slug already in use" {
+			resp.Diagnostics.AddError("Tenant slug already in use", "The tenant slug is already in use. Please choose a different slug.")
+			return
+		}
+
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to create tenant, got status: %d", tenantResp.StatusCode()))
 		return
 	}

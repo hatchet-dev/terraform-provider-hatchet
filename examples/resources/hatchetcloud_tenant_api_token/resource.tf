@@ -11,21 +11,19 @@ provider "hatchetcloud" {
   # Token is read from HATCHET_TOKEN environment variable
 }
 
-# Create a tenant first
-resource "hatchetcloud_tenant" "example" {
-  name = "Example Tenant"
-  slug = "example"
-}
-
-# Create an API token for the tenant
-resource "hatchetcloud_tenant_api_token" "production_token" {
-  tenant_id = hatchetcloud_tenant.example.id
-  name      = "Production API Token"
+data "hatchetcloud_tenant" "example" {
+  id = "707d0855-80ab-4e1f-a156-f1c4546cbf52"
 }
 
 # Create a temporary API token with expiration
 resource "hatchetcloud_tenant_api_token" "temp_token" {
-  tenant_id  = hatchetcloud_tenant.example.id
+  tenant_id  = data.hatchetcloud_tenant.example.id
   name       = "Temporary Access Token"
-  expires_at = "24h"
+  expires_at = "3m"
+}
+
+# Output the token value so it can be used
+output "api_token" {
+  value     = hatchetcloud_tenant_api_token.temp_token.token
+  sensitive = true
 }

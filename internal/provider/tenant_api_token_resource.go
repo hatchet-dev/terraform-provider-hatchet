@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -19,6 +20,28 @@ var (
 	_ resource.Resource                = &TenantAPITokenResource{}
 	_ resource.ResourceWithImportState = &TenantAPITokenResource{}
 )
+
+// APITokenJWTClaims represents the structure of the API token JWT
+type APITokenJWTClaims struct {
+	TokenID string `json:"token_id"`
+	jwt.RegisteredClaims
+}
+
+// decodeAPITokenJWT decodes the API token JWT and extracts the token ID
+func decodeAPITokenJWT(tokenString string) (*APITokenJWTClaims, error) {
+	// Parse the token without verification (we just need the claims)
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &APITokenJWTClaims{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JWT: %w", err)
+	}
+
+	claims, ok := token.Claims.(*APITokenJWTClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid JWT claims")
+	}
+
+	return claims, nil
+}
 
 func NewTenantAPITokenResource() resource.Resource {
 	return &TenantAPITokenResource{}
@@ -145,7 +168,19 @@ func (r *TenantAPITokenResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	data.ID = types.StringValue(tokenResp.JSON201.Token)
+	// Decode the JWT token to extract the token_id
+	claims, err := decodeAPITokenJWT(tokenResp.JSON201.Token)
+	if err != nil {
+		resp.Diagnostics.AddError("Token Decode Error", fmt.Sprintf("Unable to decode API token JWT: %s", err))
+		return
+	}
+
+	if claims.TokenID == "" {
+		resp.Diagnostics.AddError("Invalid Token", "JWT token does not contain a valid token_id claim")
+		return
+	}
+
+	data.ID = types.StringValue(claims.TokenID)
 	data.Token = types.StringValue(tokenResp.JSON201.Token)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
