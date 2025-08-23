@@ -44,9 +44,7 @@ terraform {
 }
 
 provider "hatchetcloud" {
-  # endpoint is optional and defaults to "cloud.onhatchet.run"
-  # token is required
-  token = "your-api-token-here"
+  # optionally can set the "token" but for production environments please use the HATCHET_TOKEN environment variable
 }
 ```
 
@@ -54,7 +52,6 @@ You can also use environment variables for configuration:
 
 ```bash
 export HATCHET_TOKEN="your-api-token-here"
-export HATCHET_ENDPOINT="cloud.onhatchet.run"  # optional, defaults to cloud.onhatchet.run
 ```
 
 ## Development
