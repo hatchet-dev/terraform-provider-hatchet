@@ -84,8 +84,7 @@ make clean
 
 The Hatchet Cloud provider supports the following configuration options:
 
-- `endpoint` (Optional): The Hatchet Cloud API endpoint. Defaults to "cloud.onhatchet.run". Can also be set via the `HATCHET_ENDPOINT` environment variable.
-- `token` (Required, Sensitive): Your Hatchet Cloud API token for authentication. Can also be set via the `HATCHET_CLOUD_MANAGEMENT_TOKEN` environment variable.
+- `token` (Sensitive): Your Hatchet Cloud API token for authentication. Can also be set via the `HATCHET_CLOUD_MANAGEMENT_TOKEN` environment variable.
 
 ## Contributing
 
