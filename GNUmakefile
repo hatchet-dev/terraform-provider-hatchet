@@ -14,6 +14,7 @@ generate:
 
 fmt:
 	gofumpt -l -w .
+	terraform fmt -recursive .
 
 test:
 	go test -v -cover -timeout=120s -parallel=10 ./...
