@@ -14,7 +14,7 @@ A Terraform provider for managing Hatchet Cloud resources.
 3. Build the provider using the Go `go build` command:
 
 ```shell
-go build -o terraform-provider-hatchetcloud
+go build -o terraform-provider-hatchet
 ```
 
 ## Installing the Provider
@@ -36,22 +36,22 @@ Create a Terraform configuration file (e.g., `main.tf`) with the following conte
 ```hcl
 terraform {
   required_providers {
-    hatchetcloud = {
-      source  = "hatchet-dev/hatchetcloud"
+    hatchet = {
+      source  = "hatchet-dev/hatchet"
       version = "~> 1.0"
     }
   }
 }
 
-provider "hatchetcloud" {
-  # optionally can set the "token" but for production environments please use the HATCHET_TOKEN environment variable
+provider "hatchet" {
+  # optionally can set the "token" but for production environments please use the HATCHET_CLOUD_MANAGEMENT_TOKEN environment variable
 }
 ```
 
 You can also use environment variables for configuration:
 
 ```bash
-export HATCHET_TOKEN="your-api-token-here"
+export HATCHET_CLOUD_MANAGEMENT_TOKEN="your-api-token-here"
 ```
 
 ## Development
@@ -85,7 +85,7 @@ make clean
 The Hatchet Cloud provider supports the following configuration options:
 
 - `endpoint` (Optional): The Hatchet Cloud API endpoint. Defaults to "cloud.onhatchet.run". Can also be set via the `HATCHET_ENDPOINT` environment variable.
-- `token` (Required, Sensitive): Your Hatchet Cloud API token for authentication. Can also be set via the `HATCHET_TOKEN` environment variable.
+- `token` (Required, Sensitive): Your Hatchet Cloud API token for authentication. Can also be set via the `HATCHET_CLOUD_MANAGEMENT_TOKEN` environment variable.
 
 ## Contributing
 

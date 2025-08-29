@@ -1,3 +1,6 @@
+// Copyright (c) Hatchet Technologies Inc.
+// SPDX-License-Identifier: MIT
+
 package provider
 
 import (
@@ -13,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	managementclient "github.com/hatchet-dev/terraform-provider-hatchetcloud/internal/api"
+	managementclient "github.com/hatchet-dev/terraform-provider-hatchet/internal/api"
 )
 
 var _ provider.Provider = &HatchetCloudProvider{}
@@ -27,7 +30,7 @@ type HatchetCloudProviderModel struct {
 }
 
 func (p *HatchetCloudProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "hatchetcloud"
+	resp.TypeName = "hatchet"
 	resp.Version = p.version
 }
 
@@ -35,7 +38,7 @@ func (p *HatchetCloudProvider) Schema(ctx context.Context, req provider.SchemaRe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"token": schema.StringAttribute{
-				MarkdownDescription: "Management token for the Hatchet Cloud instance. Can also be provided via HATCHET_TOKEN environment variable.",
+				MarkdownDescription: "Management token for the Hatchet Cloud instance. Can also be provided via HATCHET_CLOUD_MANAGEMENT_TOKEN environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
@@ -52,7 +55,7 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	token := os.Getenv("HATCHET_TOKEN")
+	token := os.Getenv("HATCHET_CLOUD_MANAGEMENT_TOKEN")
 	if token == "" {
 		token = data.Token.ValueString()
 	}
@@ -61,7 +64,7 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		resp.Diagnostics.AddError(
 			"Missing Token Configuration",
 			"The provider cannot create the Hatchet Cloud API client as there is a missing or empty value for the token. "+
-				"Set the token value in the configuration or use the HATCHET_TOKEN environment variable. "+
+				"Set the token value in the configuration or use the HATCHET_CLOUD_MANAGEMENT_TOKEN environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 		return
@@ -170,7 +173,7 @@ func createAPIClient(endpoint, token, providerVersion string) (*managementclient
 		endpoint,
 		managementclient.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-			req.Header.Set("User-Agent", fmt.Sprintf("terraform-provider-hatchetcloud/%s", providerVersion))
+			req.Header.Set("User-Agent", fmt.Sprintf("terraform-provider-hatchet/%s", providerVersion))
 			return nil
 		}),
 	)

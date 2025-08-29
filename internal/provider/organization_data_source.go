@@ -1,3 +1,6 @@
+// Copyright (c) Hatchet Technologies Inc.
+// SPDX-License-Identifier: MIT
+
 package provider
 
 import (
@@ -9,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	managementclient "github.com/hatchet-dev/terraform-provider-hatchetcloud/internal/api"
+	managementclient "github.com/hatchet-dev/terraform-provider-hatchet/internal/api"
 )
 
 var (
