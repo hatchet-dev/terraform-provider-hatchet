@@ -187,10 +187,12 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	var foundTenant *managementclient.OrganizationTenant
-	for _, tenant := range orgResp.JSON200.Tenants {
-		if tenant.Id == tenantID {
-			foundTenant = &tenant
-			break
+	if orgResp.JSON200.Tenants != nil {
+		for _, tenant := range *orgResp.JSON200.Tenants {
+			if tenant.Id == tenantID {
+				foundTenant = &tenant
+				break
+			}
 		}
 	}
 

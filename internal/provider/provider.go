@@ -120,6 +120,7 @@ func (p *HatchetCloudProvider) Resources(ctx context.Context) []func() resource.
 	return []func() resource.Resource{
 		NewTenantResource,
 		NewTenantAPITokenResource,
+		NewOrganizationMemberResource,
 	}
 }
 

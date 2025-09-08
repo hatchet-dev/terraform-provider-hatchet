@@ -31,7 +31,6 @@ type OrganizationDataSource struct {
 type OrganizationDataSourceModel struct {
 	ID   types.String `tfsdk:"id"`
 	Name types.String `tfsdk:"name"`
-	Slug types.String `tfsdk:"slug"`
 }
 
 func (d *OrganizationDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -48,10 +47,6 @@ func (d *OrganizationDataSource) Schema(ctx context.Context, req datasource.Sche
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the organization.",
-				Computed:            true,
-			},
-			"slug": schema.StringAttribute{
-				MarkdownDescription: "The slug of the organization.",
 				Computed:            true,
 			},
 		},
@@ -117,7 +112,6 @@ func (d *OrganizationDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	data.Name = types.StringValue(orgResp.JSON200.Name)
-	data.Slug = types.StringValue(orgResp.JSON200.Slug)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

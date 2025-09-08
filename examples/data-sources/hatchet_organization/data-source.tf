@@ -15,8 +15,3 @@ provider "hatchet" {
 data "hatchet_organization" "example" {
   id = "17015348-d740-45f2-b23d-ea284c6eb3ee"
 }
-
-# Output the organization slug
-output "organization_slug" {
-  value = data.hatchet_organization.example.slug
-}
