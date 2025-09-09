@@ -34,6 +34,7 @@ const (
 // Defines values for OrganizationInviteStatus.
 const (
 	ACCEPTED OrganizationInviteStatus = "ACCEPTED"
+	EXPIRED  OrganizationInviteStatus = "EXPIRED"
 	PENDING  OrganizationInviteStatus = "PENDING"
 	REJECTED OrganizationInviteStatus = "REJECTED"
 )
@@ -251,6 +252,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// OrganizationInviteDelete request
+	OrganizationInviteDelete(ctx context.Context, organizationInvite openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// OrganizationMemberDeleteWithBody request with any body
 	OrganizationMemberDeleteWithBody(ctx context.Context, organizationMember openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -290,6 +294,18 @@ type ClientInterface interface {
 	OrganizationCreateTenantWithBody(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	OrganizationCreateTenant(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) OrganizationInviteDelete(ctx context.Context, organizationInvite openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewOrganizationInviteDeleteRequest(c.Server, organizationInvite)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) OrganizationMemberDeleteWithBody(ctx context.Context, organizationMember openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -470,6 +486,40 @@ func (c *Client) OrganizationCreateTenant(ctx context.Context, organization open
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewOrganizationInviteDeleteRequest generates requests for OrganizationInviteDelete
+func NewOrganizationInviteDeleteRequest(server string, organizationInvite openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "organization-invite", runtime.ParamLocationPath, organizationInvite)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/management/organization-invites/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewOrganizationMemberDeleteRequest calls the generic OrganizationMemberDelete builder with application/json body
@@ -927,6 +977,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// OrganizationInviteDeleteWithResponse request
+	OrganizationInviteDeleteWithResponse(ctx context.Context, organizationInvite openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationInviteDeleteResponse, error)
+
 	// OrganizationMemberDeleteWithBodyWithResponse request with any body
 	OrganizationMemberDeleteWithBodyWithResponse(ctx context.Context, organizationMember openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationMemberDeleteResponse, error)
 
@@ -966,6 +1019,29 @@ type ClientWithResponsesInterface interface {
 	OrganizationCreateTenantWithBodyWithResponse(ctx context.Context, organization openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error)
 
 	OrganizationCreateTenantWithResponse(ctx context.Context, organization openapi_types.UUID, body OrganizationCreateTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*OrganizationCreateTenantResponse, error)
+}
+
+type OrganizationInviteDeleteResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *APIError
+	JSON403      *APIError
+}
+
+// Status returns HTTPResponse.Status
+func (r OrganizationInviteDeleteResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r OrganizationInviteDeleteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type OrganizationMemberDeleteResponse struct {
@@ -1205,6 +1281,15 @@ func (r OrganizationCreateTenantResponse) StatusCode() int {
 	return 0
 }
 
+// OrganizationInviteDeleteWithResponse request returning *OrganizationInviteDeleteResponse
+func (c *ClientWithResponses) OrganizationInviteDeleteWithResponse(ctx context.Context, organizationInvite openapi_types.UUID, reqEditors ...RequestEditorFn) (*OrganizationInviteDeleteResponse, error) {
+	rsp, err := c.OrganizationInviteDelete(ctx, organizationInvite, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseOrganizationInviteDeleteResponse(rsp)
+}
+
 // OrganizationMemberDeleteWithBodyWithResponse request with arbitrary body returning *OrganizationMemberDeleteResponse
 func (c *ClientWithResponses) OrganizationMemberDeleteWithBodyWithResponse(ctx context.Context, organizationMember openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*OrganizationMemberDeleteResponse, error) {
 	rsp, err := c.OrganizationMemberDeleteWithBody(ctx, organizationMember, contentType, body, reqEditors...)
@@ -1333,6 +1418,39 @@ func (c *ClientWithResponses) OrganizationCreateTenantWithResponse(ctx context.C
 		return nil, err
 	}
 	return ParseOrganizationCreateTenantResponse(rsp)
+}
+
+// ParseOrganizationInviteDeleteResponse parses an HTTP response from a OrganizationInviteDeleteWithResponse call
+func ParseOrganizationInviteDeleteResponse(rsp *http.Response) (*OrganizationInviteDeleteResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &OrganizationInviteDeleteResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest APIError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest APIError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseOrganizationMemberDeleteResponse parses an HTTP response from a OrganizationMemberDeleteWithResponse call

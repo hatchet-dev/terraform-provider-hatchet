@@ -1,11 +1,11 @@
 default: fmt lint install generate
 
 build:
-	go build -v ./...
+	go build -o terraform-provider-hatchet
 
 install: build
-	go install -v ./...
-
+	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchet/0.1.0/darwin_arm64
+	mv terraform-provider-hatchet ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchet/0.1.0/darwin_arm64/terraform-provider-hatchet
 lint:
 	golangci-lint run
 

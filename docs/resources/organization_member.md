@@ -52,4 +52,5 @@ resource "hatchet_organization_member" "jane" {
 - `expires` (String) When the invitation expires (only available while invitation is pending).
 - `invite_id` (String) The ID of the invitation (available while invitation is pending).
 - `inviter_email` (String) Email address of the user who sent the invitation.
+- `member_id` (String) The ID of the member once they have accepted the invitation.
 - `status` (String) Current status of the member: 'PENDING' (invited but not yet accepted), 'ACCEPTED' (active member), or 'REJECTED' (declined invitation).

@@ -38,6 +38,7 @@ type OrganizationMemberResourceModel struct {
 	Email        types.String `tfsdk:"email"`
 	Role         types.String `tfsdk:"role"`
 	Status       types.String `tfsdk:"status"`
+	MemberID     types.String `tfsdk:"member_id"`
 	InviteID     types.String `tfsdk:"invite_id"`
 	InviterEmail types.String `tfsdk:"inviter_email"`
 	Expires      types.String `tfsdk:"expires"`
@@ -61,12 +62,13 @@ func (r *OrganizationMemberResource) Schema(ctx context.Context, req resource.Sc
 			"role": schema.StringAttribute{
 				MarkdownDescription: "Role of the member in the organization. Currently only 'OWNER' is supported.",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"status": schema.StringAttribute{
 				MarkdownDescription: "Current status of the member: 'PENDING' (invited but not yet accepted), 'ACCEPTED' (active member), or 'REJECTED' (declined invitation).",
+				Computed:            true,
+			},
+			"member_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the member once they have accepted the invitation.",
 				Computed:            true,
 			},
 			"invite_id": schema.StringAttribute{
@@ -180,11 +182,13 @@ func (r *OrganizationMemberResource) Read(ctx context.Context, req resource.Read
 	if err := r.refreshMemberData(ctx, &data); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			// Member/invite no longer exists, remove from state
+			// This will cause Terraform to detect it as a new resource that needs to be created
 			resp.State.RemoveResource(ctx)
 			return
+		} else {
+			resp.Diagnostics.AddError("Error reading member state", err.Error())
+			return
 		}
-		resp.Diagnostics.AddError("Error reading member state", err.Error())
-		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -205,33 +209,52 @@ func (r *OrganizationMemberResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	orgID, err := uuid.Parse(r.organizationID)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Organization ID from token", err.Error())
-		return
-	}
-
-	// Parse email for removal
-	email := openapi_types.Email(data.Email.ValueString())
-
-	// Create removal request
-	removeReq := managementclient.RemoveOrganizationMembersRequest{
-		Emails: []openapi_types.Email{email},
-	}
-
-	// Remove member
-	removeResp, err := r.client.OrganizationMemberDeleteWithResponse(ctx, orgID, removeReq)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to remove organization member, got error: %s", err))
-		return
-	}
-
-	if removeResp.StatusCode() < 200 || removeResp.StatusCode() >= 300 {
-		if removeResp.JSON400 != nil {
-			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to remove organization member: %s", removeResp.JSON400.Description))
-		} else {
-			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to remove organization member, got status: %d", removeResp.StatusCode()))
+	// Check if this is an invite (has invite_id) or an existing member (has member_id)
+	if !data.InviteID.IsNull() && data.InviteID.ValueString() != "" {
+		// This is an invite - delete the invite
+		inviteID, err := uuid.Parse(data.InviteID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Invalid Invite ID", err.Error())
+			return
 		}
+
+		inviteDeleteResp, err := r.client.OrganizationInviteDeleteWithResponse(ctx, inviteID)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete organization invite, got error: %s", err))
+			return
+		}
+
+		if inviteDeleteResp.StatusCode() < 200 || inviteDeleteResp.StatusCode() >= 300 {
+			resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete organization invite, got status: %d", inviteDeleteResp.StatusCode()))
+			return
+		}
+	} else if !data.MemberID.IsNull() && data.MemberID.ValueString() != "" {
+		// This is an existing member - remove them from the organization
+		email := openapi_types.Email(data.Email.ValueString())
+
+		// Create removal request
+		removeReq := managementclient.RemoveOrganizationMembersRequest{
+			Emails: []openapi_types.Email{email},
+		}
+
+		// Remove member
+		removeResp, err := r.client.OrganizationMemberDeleteWithResponse(ctx, uuid.MustParse(data.MemberID.ValueString()), removeReq)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to remove organization member, got error: %s", err))
+			return
+		}
+
+		if removeResp.StatusCode() < 200 || removeResp.StatusCode() >= 300 {
+			if removeResp.JSON400 != nil {
+				resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to remove organization member: %s", removeResp.JSON400.Description))
+			} else {
+				resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to remove organization member, got status: %d", removeResp.StatusCode()))
+			}
+			return
+		}
+	} else {
+		// Neither invite_id nor member_id is available - this shouldn't happen in normal operation
+		resp.Diagnostics.AddError("Invalid State", "Unable to determine if this is an invite or member - both invite_id and member_id are empty")
 		return
 	}
 }
@@ -273,6 +296,7 @@ func (r *OrganizationMemberResource) refreshMemberData(ctx context.Context, data
 				// Found existing member
 				data.Status = types.StringValue("ACCEPTED")
 				data.Role = types.StringValue(string(member.Role))
+				data.MemberID = types.StringValue(member.Metadata.Id)
 				data.InviteID = types.StringNull()
 				data.InviterEmail = types.StringNull()
 				data.Expires = types.StringNull()
@@ -297,6 +321,7 @@ func (r *OrganizationMemberResource) refreshMemberData(ctx context.Context, data
 			// Found pending invitation
 			data.Status = types.StringValue(string(invite.Status))
 			data.Role = types.StringValue(string(invite.Role))
+			data.MemberID = types.StringNull()
 			data.InviteID = types.StringValue(invite.Metadata.Id)
 			data.InviterEmail = types.StringValue(string(invite.InviterEmail))
 			data.Expires = types.StringValue(invite.Expires.String())
