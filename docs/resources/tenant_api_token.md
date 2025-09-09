@@ -34,7 +34,7 @@ data "hatchet_tenant" "example" {
 resource "hatchet_tenant_api_token" "temp_token" {
   tenant_id  = data.hatchet_tenant.example.id
   name       = "Temporary Access Token"
-  expires_at = "3m"
+  expires_at = "720h" // 30 days
 }
 
 # Output the token value so it can be used
