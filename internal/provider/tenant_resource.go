@@ -6,6 +6,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"regexp"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -17,6 +20,22 @@ import (
 
 	managementclient "github.com/hatchet-dev/terraform-provider-hatchet/internal/api"
 )
+
+func generateSlug(name string) string {
+	slug := strings.ToLower(name)
+	re := regexp.MustCompile(`[^a-z0-9-]`)
+	slug = re.ReplaceAllString(slug, "-")
+	re = regexp.MustCompile(`-+`)
+	slug = re.ReplaceAllString(slug, "-")
+	slug = strings.Trim(slug, "-")
+
+	randomSuffix := make([]byte, 5)
+	for i := range randomSuffix {
+		randomSuffix[i] = "abcdefghijklmnopqrstuvwxyz0123456789"[rand.Intn(36)]
+	}
+
+	return slug + "-" + string(randomSuffix)
+}
 
 var (
 	_ resource.Resource                = &TenantResource{}
@@ -58,7 +77,7 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "The slug of the tenant.",
-				Required:            true,
+				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -118,9 +137,15 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	slug := data.Slug.ValueString()
+	if slug == "" {
+		slug = generateSlug(data.Name.ValueString())
+		data.Slug = types.StringValue(slug)
+	}
+
 	createReq := managementclient.CreateNewTenantForOrganizationRequest{
 		Name: data.Name.ValueString(),
-		Slug: data.Slug.ValueString(),
+		Slug: slug,
 	}
 
 	tenantResp, err := r.client.OrganizationCreateTenantWithResponse(ctx, orgID, createReq)

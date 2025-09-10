@@ -29,13 +29,11 @@ provider "hatchet" {
 # Create a new tenant
 resource "hatchet_tenant" "production" {
   name = "Production Environment"
-  slug = "prod"
 }
 
 # Create another tenant
 resource "hatchet_tenant" "staging" {
   name = "Staging Environment"
-  slug = "staging"
 }
 ```
 
@@ -45,6 +43,9 @@ resource "hatchet_tenant" "staging" {
 ### Required
 
 - `name` (String) The name of the tenant.
+
+### Optional
+
 - `slug` (String) The slug of the tenant.
 
 ### Read-Only

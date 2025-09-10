@@ -14,11 +14,9 @@ provider "hatchet" {
 # Create a new tenant
 resource "hatchet_tenant" "production" {
   name = "Production Environment"
-  slug = "prod"
 }
 
 # Create another tenant
 resource "hatchet_tenant" "staging" {
   name = "Staging Environment"
-  slug = "staging"
 }

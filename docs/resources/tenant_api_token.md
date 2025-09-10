@@ -54,7 +54,7 @@ output "api_token" {
 
 ### Optional
 
-- `expires_at` (String) The expiration date of the API token (optional).
+- `expires_at` (String) The expiration date of the API token (optional). Must be a valid Go duration (e.g., '24h', '30m', '1h30m').
 
 ### Read-Only
 

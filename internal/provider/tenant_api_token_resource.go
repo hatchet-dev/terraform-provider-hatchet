@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -13,7 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	managementclient "github.com/hatchet-dev/terraform-provider-hatchet/internal/api"
@@ -28,6 +31,32 @@ var (
 type APITokenJWTClaims struct {
 	TokenID string `json:"token_id"`
 	jwt.RegisteredClaims
+}
+
+// durationValidator validates that a string is a valid Go duration
+type durationValidator struct{}
+
+func (v durationValidator) Description(ctx context.Context) string {
+	return "value must be a valid Go duration (e.g., '24h', '30m', '1h30m')"
+}
+
+func (v durationValidator) MarkdownDescription(ctx context.Context) string {
+	return "value must be a valid Go duration (e.g., `24h`, `30m`, `1h30m`)"
+}
+
+func (v durationValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	_, err := time.ParseDuration(req.ConfigValue.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Duration",
+			fmt.Sprintf("Value must be a valid Go duration (e.g., '24h', '30m', '1h30m'). Got: %s", req.ConfigValue.ValueString()),
+		)
+	}
 }
 
 // decodeAPITokenJWT decodes the API token JWT and extracts the token ID
@@ -89,8 +118,13 @@ func (r *TenantAPITokenResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"expires_at": schema.StringAttribute{
-				MarkdownDescription: "The expiration date of the API token (optional).",
+				MarkdownDescription: "The expiration date of the API token (optional). Must be a valid Go duration (e.g., '24h', '30m', '1h30m').",
+				Default:             stringdefault.StaticString("720h"),
 				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					durationValidator{},
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -150,10 +184,8 @@ func (r *TenantAPITokenResource) Create(ctx context.Context, req resource.Create
 		Name: data.Name.ValueString(),
 	}
 
-	if !data.ExpiresAt.IsNull() {
-		expiresIn := data.ExpiresAt.ValueString()
-		createReq.ExpiresIn = &expiresIn
-	}
+	expiresIn := data.ExpiresAt.ValueString()
+	createReq.ExpiresIn = &expiresIn
 
 	tokenResp, err := r.client.OrganizationTenantCreateApiTokenWithResponse(ctx, tenantID, createReq)
 	if err != nil {
