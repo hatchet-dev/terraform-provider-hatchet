@@ -25,7 +25,18 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - name: Check if GPG secrets are available
+        id: check_gpg
+        run: |
+          if [ -n "${{ secrets.GPG_PRIVATE_KEY }}" ]; then
+            echo "gpg_available=true" >> $GITHUB_OUTPUT
+            echo "GPG signing will be enabled"
+          else
+            echo "gpg_available=false" >> $GITHUB_OUTPUT
+            echo "Warning: GPG_PRIVATE_KEY secret not found. Releases will not be signed."
+          fi
       - name: Import GPG key
+        if: steps.check_gpg.outputs.gpg_available == 'true'
         uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
         id: import_gpg
         with:
@@ -37,4 +48,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GPG_FINGERPRINT: ${{ steps.check_gpg.outputs.gpg_available == 'true' && steps.import_gpg.outputs.fingerprint || '' }}
