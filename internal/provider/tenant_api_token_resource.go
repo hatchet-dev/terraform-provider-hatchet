@@ -118,7 +118,7 @@ func (r *TenantAPITokenResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"expires_at": schema.StringAttribute{
-				MarkdownDescription: "The expiration date of the API token (optional). Must be a valid Go duration (e.g., '24h', '30m', '1h30m').",
+				MarkdownDescription: "The expiration date of the API token. Must be a valid Go duration (e.g., '24h', '30m', '1h30m'). Default is 30 days.",
 				Default:             stringdefault.StaticString("720h"),
 				Optional:            true,
 				Computed:            true,

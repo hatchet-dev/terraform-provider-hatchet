@@ -46,7 +46,7 @@ resource "hatchet_tenant" "staging" {
 
 ### Optional
 
-- `slug` (String) The slug of the tenant.
+- `slug` (String) The slug of the tenant. If not provided, a random slug will be generated.
 
 ### Read-Only
 
