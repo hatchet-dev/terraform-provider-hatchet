@@ -76,8 +76,9 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				Required:            true,
 			},
 			"slug": schema.StringAttribute{
-				MarkdownDescription: "The slug of the tenant. If not provided, a random slug will be generated.",
+				MarkdownDescription: "The slug of the tenant. If not provided, a slug will be generated from the name.",
 				Optional:            true,
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},

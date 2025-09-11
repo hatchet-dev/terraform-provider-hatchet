@@ -17,7 +17,7 @@ terraform {
   required_providers {
     hatchet = {
       source  = "hatchet-dev/hatchet"
-      version = "~> 0.1.0"
+      version = "~> 0.2.1"
     }
   }
 }
@@ -29,6 +29,7 @@ provider "hatchet" {
 # Create a new tenant
 resource "hatchet_tenant" "production" {
   name = "Production Environment"
+  slug = "production-123"
 }
 
 # Create another tenant
@@ -46,7 +47,7 @@ resource "hatchet_tenant" "staging" {
 
 ### Optional
 
-- `slug` (String) The slug of the tenant. If not provided, a random slug will be generated.
+- `slug` (String) The slug of the tenant. If not provided, a slug will be generated from the name.
 
 ### Read-Only
 
