@@ -4,8 +4,8 @@ build:
 	go build -o terraform-provider-hatchet
 
 install: build
-	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchet/0.1.0/darwin_arm64
-	mv terraform-provider-hatchet ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchet/0.1.0/darwin_arm64/terraform-provider-hatchet
+	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchet/0.2.1/darwin_arm64
+	mv terraform-provider-hatchet ~/.terraform.d/plugins/registry.terraform.io/hatchet-dev/hatchet/0.2.1/darwin_arm64/terraform-provider-hatchet
 lint:
 	golangci-lint run
 
