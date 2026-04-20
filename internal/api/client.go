@@ -504,7 +504,7 @@ func NewOrganizationInviteDeleteRequest(server string, organizationInvite openap
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-invites/%s", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-invites/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -549,7 +549,7 @@ func NewOrganizationMemberDeleteRequestWithBody(server string, organizationMembe
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-members/%s", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-members/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -585,7 +585,7 @@ func NewOrganizationTenantDeleteRequest(server string, organizationTenant openap
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -619,7 +619,7 @@ func NewOrganizationTenantListApiTokensRequest(server string, organizationTenant
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s/api-tokens", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s/api-tokens", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -664,7 +664,7 @@ func NewOrganizationTenantCreateApiTokenRequestWithBody(server string, organizat
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s/api-tokens", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s/api-tokens", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -707,7 +707,7 @@ func NewOrganizationTenantDeleteApiTokenRequest(server string, organizationTenan
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s/api-tokens/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s/api-tokens/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -741,7 +741,7 @@ func NewOrganizationGetRequest(server string, organization openapi_types.UUID) (
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organizations/%s", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organizations/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -775,7 +775,7 @@ func NewOrganizationInviteListRequest(server string, organization openapi_types.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organizations/%s/invites", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organizations/%s/invites", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -820,7 +820,7 @@ func NewOrganizationInviteCreateRequestWithBody(server string, organization open
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organizations/%s/invites", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organizations/%s/invites", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -867,7 +867,7 @@ func NewManagementTokenCreateRequestWithBody(server string, organization openapi
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organizations/%s/management-tokens", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organizations/%s/management-tokens", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -914,7 +914,7 @@ func NewOrganizationCreateTenantRequestWithBody(server string, organization open
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organizations/%s/tenants", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organizations/%s/tenants", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
