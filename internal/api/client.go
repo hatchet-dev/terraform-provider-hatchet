@@ -619,7 +619,7 @@ func NewOrganizationTenantListApiTokensRequest(server string, organizationTenant
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s/api-tokens", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s/api-tokens", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -664,7 +664,7 @@ func NewOrganizationTenantCreateApiTokenRequestWithBody(server string, organizat
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s/api-tokens", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s/api-tokens", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -707,7 +707,7 @@ func NewOrganizationTenantDeleteApiTokenRequest(server string, organizationTenan
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/management/organization-tenants/%s/api-tokens/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/control-plane/organization-tenants/%s/api-tokens/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
