@@ -9,7 +9,10 @@ install: build
 lint:
 	golangci-lint run
 
-generate:
+generate-api:
+	go generate ./internal/api/...
+
+generate: generate-api
 	cd tools; go generate ./...
 
 fmt:
@@ -22,4 +25,4 @@ test:
 testacc:
 	TF_ACC=1 go test -v -cover -timeout 120m ./...
 
-.PHONY: fmt lint test testacc build install generate
+.PHONY: fmt lint test testacc build install generate generate-api

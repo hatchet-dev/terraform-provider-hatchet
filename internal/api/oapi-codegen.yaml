@@ -1,0 +1,7 @@
+package: managementclient
+output: client.go
+generate:
+  models: true
+  client: true
+import-mapping:
+  core.yml: github.com/hatchet-dev/hatchet/api/v1/server/oas/gen

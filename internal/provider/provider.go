@@ -55,9 +55,9 @@ func (p *HatchetCloudProvider) Configure(ctx context.Context, req provider.Confi
 		return
 	}
 
-	token := os.Getenv("HATCHET_CLOUD_MANAGEMENT_TOKEN")
+	token := data.Token.ValueString()
 	if token == "" {
-		token = data.Token.ValueString()
+		token = os.Getenv("HATCHET_CLOUD_MANAGEMENT_TOKEN")
 	}
 
 	if token == "" {
