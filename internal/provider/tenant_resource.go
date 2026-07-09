@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	managementclient "github.com/hatchet-dev/terraform-provider-hatchet/internal/api"
 )
@@ -55,6 +56,7 @@ type TenantResourceModel struct {
 	ID         types.String `tfsdk:"id"`
 	Name       types.String `tfsdk:"name"`
 	Slug       types.String `tfsdk:"slug"`
+	Tags       types.List   `tfsdk:"tags"`
 	Status     types.String `tfsdk:"status"`
 	ArchivedAt types.String `tfsdk:"archived_at"`
 }
@@ -74,6 +76,9 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the tenant.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "The slug of the tenant. If not provided, a slug will be generated from the name.",
@@ -82,6 +87,12 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"tags": schema.ListAttribute{
+				MarkdownDescription: "Tags applied to this tenant. Management tokens can only create or access tenants whose tags are a subset of the token's own tags.",
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
 			},
 			"status": schema.StringAttribute{
 				MarkdownDescription: "The status of the tenant (active, archived).",
@@ -148,12 +159,25 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		Name: data.Name.ValueString(),
 		Slug: slug,
 	}
+	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
+		var tags []string
+		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		createReq.Tags = &tags
+	}
 
 	tenantResp, err := r.client.OrganizationCreateTenantWithResponse(ctx, orgID, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create tenant, got error: %s", err))
 		return
 	}
+
+	tflog.Debug(ctx, "tenant create response", map[string]any{
+		"status": tenantResp.StatusCode(),
+		"body":   string(tenantResp.Body),
+	})
 
 	if tenantResp.StatusCode() < 200 || tenantResp.StatusCode() >= 300 {
 		if tenantResp.JSON400 != nil && tenantResp.JSON400.Description == "tenant slug already in use" {
@@ -176,6 +200,17 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		data.ArchivedAt = types.StringValue(tenantResp.JSON201.ArchivedAt.String())
 	} else {
 		data.ArchivedAt = types.StringNull()
+	}
+	if tenantResp.JSON201.Tags != nil {
+		tagList, diags := types.ListValueFrom(ctx, types.StringType, *tenantResp.JSON201.Tags)
+		resp.Diagnostics.Append(diags...)
+		data.Tags = tagList
+	} else if data.Tags.IsNull() || data.Tags.IsUnknown() {
+		// The create response doesn't echo tags back; only default to empty
+		// when the plan didn't already give us a concrete value (e.g. tags
+		// weren't set in config at all), so we don't clobber a known,
+		// just-requested value with an empty list.
+		data.Tags, _ = types.ListValueFrom(ctx, types.StringType, []string{})
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -201,6 +236,11 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	tflog.Debug(ctx, "organization get response", map[string]any{
+		"status": orgResp.StatusCode(),
+		"body":   string(orgResp.Body),
+	})
+
 	if orgResp.StatusCode() < 200 || orgResp.StatusCode() >= 300 || orgResp.JSON200 == nil {
 		resp.Diagnostics.AddError("API Error", "Organization not found")
 		return
@@ -223,11 +263,27 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	if foundTenant == nil {
+		tflog.Debug(ctx, "tenant not found in organization tenant list", map[string]any{
+			"tenant_id": tenantID.String(),
+		})
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
 	data.Status = types.StringValue(string(foundTenant.Status))
+	if foundTenant.Name != nil {
+		data.Name = types.StringValue(*foundTenant.Name)
+	}
+	if foundTenant.Slug != nil {
+		data.Slug = types.StringValue(*foundTenant.Slug)
+	}
+	if foundTenant.Tags != nil {
+		tagList, diags := types.ListValueFrom(ctx, types.StringType, *foundTenant.Tags)
+		resp.Diagnostics.Append(diags...)
+		data.Tags = tagList
+	} else {
+		data.Tags, _ = types.ListValueFrom(ctx, types.StringType, []string{})
+	}
 	if foundTenant.ArchivedAt != nil {
 		data.ArchivedAt = types.StringValue(foundTenant.ArchivedAt.String())
 	} else {
@@ -238,10 +294,50 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *TenantResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Update Not Supported",
-		"Tenant update is not currently supported through the Terraform provider.",
-	)
+	var plan TenantResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	orgID, err := uuid.Parse(r.organizationID)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Organization ID from token", err.Error())
+		return
+	}
+
+	tenantID, err := uuid.Parse(plan.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Tenant ID", err.Error())
+		return
+	}
+
+	var tags []string
+	resp.Diagnostics.Append(plan.Tags.ElementsAs(ctx, &tags, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if tags == nil {
+		tags = []string{}
+	}
+
+	setTagsResp, err := r.client.OrganizationTenantSetTagsWithResponse(ctx, orgID, tenantID, managementclient.SetTagsRequest{Tags: tags})
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update tenant tags, got error: %s", err))
+		return
+	}
+
+	tflog.Debug(ctx, "tenant set tags response", map[string]any{
+		"status": setTagsResp.StatusCode(),
+		"body":   string(setTagsResp.Body),
+	})
+
+	if setTagsResp.StatusCode() < 200 || setTagsResp.StatusCode() >= 300 {
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update tenant tags, got status: %d", setTagsResp.StatusCode()))
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *TenantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -263,6 +359,11 @@ func (r *TenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete tenant, got error: %s", err))
 		return
 	}
+
+	tflog.Debug(ctx, "tenant delete response", map[string]any{
+		"status": deleteResp.StatusCode(),
+		"body":   string(deleteResp.Body),
+	})
 
 	if deleteResp.StatusCode() < 200 || deleteResp.StatusCode() >= 300 {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete tenant, got status: %d", deleteResp.StatusCode()))

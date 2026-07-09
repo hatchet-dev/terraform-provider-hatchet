@@ -48,6 +48,7 @@ resource "hatchet_tenant" "staging" {
 ### Optional
 
 - `slug` (String) The slug of the tenant. If not provided, a slug will be generated from the name.
+- `tags` (List of String) Tags applied to this tenant. Management tokens can only create or access tenants whose tags are a subset of the token's own tags.
 
 ### Read-Only
 

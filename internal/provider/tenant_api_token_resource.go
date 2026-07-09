@@ -248,7 +248,7 @@ func (r *TenantAPITokenResource) Read(ctx context.Context, req resource.ReadRequ
 
 	tokenID := data.ID.ValueString()
 	tokenFound := false
-	for _, token := range *tokensResp.JSON200.Rows {
+	for _, token := range tokensResp.JSON200.Rows {
 		if token.Metadata.Id == tokenID {
 			tokenFound = true
 			data.Name = types.StringValue(token.Name)
