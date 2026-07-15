@@ -16,7 +16,7 @@ terraform {
   required_providers {
     hatchet = {
       source  = "hatchet-dev/hatchet"
-      version = "~> 0.2.1"
+      version = "~> 1.0"
     }
   }
 }
