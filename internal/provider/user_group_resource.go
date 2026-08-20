@@ -6,11 +6,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
+	stringvalidators "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	managementclient "github.com/hatchet-dev/terraform-provider-hatchet/internal/api"
@@ -55,8 +58,11 @@ func (r *UserGroupResource) Schema(ctx context.Context, req resource.SchemaReque
 				Required:            true,
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "The tenant role granted to group members when synced to a matching tenant. One of `OWNER`, `ADMIN`, `MEMBER`.",
+				MarkdownDescription: "The tenant role granted to group members when synced to a matching tenant. One of `OWNER`, `ADMIN`, `MEMBER`, `VIEWER`.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidators.OneOf("OWNER", "ADMIN", "MEMBER", "VIEWER"),
+				},
 			},
 			"tags": schema.ListAttribute{
 				MarkdownDescription: "Tags that determine which tenants this group's members are synced to.",
@@ -141,6 +147,13 @@ func (r *UserGroupResource) Create(ctx context.Context, req resource.CreateReque
 		return
 	}
 
+	data.ID = types.StringValue(createResp.JSON201.Metadata.Id)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
 		var tags []string
 		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
@@ -159,8 +172,6 @@ func (r *UserGroupResource) Create(ctx context.Context, req resource.CreateReque
 		}
 	}
 
-	data.ID = types.StringValue(createResp.JSON201.Metadata.Id)
-
 	if err := r.refreshGroupData(ctx, &data); err != nil {
 		resp.Diagnostics.AddError("Error reading user group state", err.Error())
 		return
@@ -178,7 +189,12 @@ func (r *UserGroupResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	if err := r.refreshGroupData(ctx, &data); err != nil {
-		resp.State.RemoveResource(ctx)
+
+		if strings.Contains(err.Error(), "not found") {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError("Error reading user group state", err.Error())
 		return
 	}
 

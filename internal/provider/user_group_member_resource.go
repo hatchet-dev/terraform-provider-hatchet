@@ -284,7 +284,7 @@ func (r *UserGroupMemberResource) resolveMemberIDByEmail(ctx context.Context, or
 
 	if orgResp.JSON200.Members != nil {
 		for _, member := range *orgResp.JSON200.Members {
-			if string(member.Email) == email {
+			if strings.EqualFold(string(member.Email), email) {
 				return uuid.Parse(member.Metadata.Id)
 			}
 		}
