@@ -21,3 +21,9 @@ resource "hatchet_tenant" "production" {
 resource "hatchet_tenant" "staging" {
   name = "Staging Environment"
 }
+
+# Pin a tenant to a specific region/shard
+resource "hatchet_tenant" "eu_production" {
+  name   = "EU Production Environment"
+  region = "aws:eu-west-1"
+}

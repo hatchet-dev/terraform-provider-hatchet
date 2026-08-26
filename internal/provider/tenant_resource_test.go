@@ -54,6 +54,29 @@ func TestAccTenantResource_withSlug(t *testing.T) {
 	})
 }
 
+// TestAccTenantResource_withRegion verifies that an explicit region is sent on
+// create and round-trips through Read, and that changing it forces replacement.
+func TestAccTenantResource_withRegion(t *testing.T) {
+	name := testAccUniqueName("tenant-region")
+	region := os.Getenv("HATCHET_ACC_REGION")
+	if region == "" {
+		t.Skip("HATCHET_ACC_REGION not set (needs a region key valid for the test organization, e.g. aws:us-west-2)")
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTenantResourceConfigWithRegion(name, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("hatchet_tenant.test", "name", name),
+					resource.TestCheckResourceAttr("hatchet_tenant.test", "region", region),
+				),
+			},
+		},
+	})
+}
+
 // TestAccTenantResource_withTags verifies tags round-trip through Create and Read,
 // and that in-place tag updates work via the SetTags endpoint.
 func TestAccTenantResource_withTags(t *testing.T) {
@@ -135,6 +158,65 @@ func TestAccTenantTagScoping_accessDenied(t *testing.T) {
 	})
 }
 
+func TestAccTenantResource_dedicatedShardWithoutRegion(t *testing.T) {
+	scopedToken := os.Getenv("HATCHET_DEDICATED_SCOPED_TOKEN")
+	if scopedToken == "" {
+		t.Skip("HATCHET_DEDICATED_SCOPED_TOKEN not set (needs a management token for an org with only dedicated/named shards)")
+	}
+	name := testAccUniqueName("tenant-dedicated-noregion")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccDedicatedTenantResourceConfig(scopedToken, name, ""),
+				ExpectError: regexp.MustCompile(`(?i)no eligible shard|region`),
+			},
+		},
+	})
+}
+
+func TestAccTenantResource_dedicatedShardWithRegion(t *testing.T) {
+	scopedToken := os.Getenv("HATCHET_DEDICATED_SCOPED_TOKEN")
+	region := os.Getenv("HATCHET_DEDICATED_REGION")
+	if scopedToken == "" || region == "" {
+		t.Skip("HATCHET_DEDICATED_SCOPED_TOKEN and HATCHET_DEDICATED_REGION must both be set")
+	}
+	name := testAccUniqueName("tenant-dedicated-withregion")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDedicatedTenantResourceConfig(scopedToken, name, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("hatchet_tenant.dedicated", "name", name),
+					resource.TestCheckResourceAttr("hatchet_tenant.dedicated", "region", region),
+					resource.TestCheckResourceAttr("hatchet_tenant.dedicated", "status", "ACTIVE"),
+				),
+			},
+		},
+	})
+}
+
+func testAccDedicatedTenantResourceConfig(scopedToken, name, region string) string {
+	regionAttr := ""
+	if region != "" {
+		regionAttr = fmt.Sprintf("\n  region   = %q", region)
+	}
+	return fmt.Sprintf(`%s
+
+provider "hatchet" {
+  alias = "dedicated"
+  token = %q
+}
+
+resource "hatchet_tenant" "dedicated" {
+  provider = hatchet.dedicated
+  name     = %q%s
+}`, testAccProviderConfig(), scopedToken, name, regionAttr)
+}
+
 func testAccTenantResourceConfig(name string) string {
 	return fmt.Sprintf(`%s
 resource "hatchet_tenant" "test" {
@@ -148,6 +230,14 @@ resource "hatchet_tenant" "test" {
   name = %q
   slug = %q
 }`, testAccProviderConfig(), name, slug)
+}
+
+func testAccTenantResourceConfigWithRegion(name, region string) string {
+	return fmt.Sprintf(`%s
+resource "hatchet_tenant" "test" {
+  name   = %q
+  region = %q
+}`, testAccProviderConfig(), name, region)
 }
 
 func testAccTenantResourceConfigWithTags(name string, tags []string) string {

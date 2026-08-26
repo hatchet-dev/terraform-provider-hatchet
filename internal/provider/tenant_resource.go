@@ -56,6 +56,7 @@ type TenantResourceModel struct {
 	ID         types.String `tfsdk:"id"`
 	Name       types.String `tfsdk:"name"`
 	Slug       types.String `tfsdk:"slug"`
+	Region     types.String `tfsdk:"region"`
 	Tags       types.List   `tfsdk:"tags"`
 	Status     types.String `tfsdk:"status"`
 	ArchivedAt types.String `tfsdk:"archived_at"`
@@ -82,6 +83,14 @@ func (r *TenantResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "The slug of the tenant. If not provided, a slug will be generated from the name.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"region": schema.StringAttribute{
+				MarkdownDescription: "Shard selector as `provider:cloud-region` or `provider:cloud-region:shard-name`, e.g. `aws:us-west-2`. The shard name is optional. When omitted, the server selects an eligible shard automatically.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -159,6 +168,10 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 		Name: data.Name.ValueString(),
 		Slug: slug,
 	}
+	if !data.Region.IsNull() && !data.Region.IsUnknown() && data.Region.ValueString() != "" {
+		region := data.Region.ValueString()
+		createReq.Region = &region
+	}
 	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
 		var tags []string
 		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
@@ -196,6 +209,11 @@ func (r *TenantResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	data.ID = types.StringValue(tenantResp.JSON201.Id.String())
 	data.Status = types.StringValue(string(tenantResp.JSON201.Status))
+	if tenantResp.JSON201.Region != nil {
+		data.Region = types.StringValue(*tenantResp.JSON201.Region)
+	} else {
+		data.Region = types.StringValue("")
+	}
 	if tenantResp.JSON201.ArchivedAt != nil {
 		data.ArchivedAt = types.StringValue(tenantResp.JSON201.ArchivedAt.String())
 	} else {
@@ -276,6 +294,9 @@ func (r *TenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 	if foundTenant.Slug != nil {
 		data.Slug = types.StringValue(*foundTenant.Slug)
+	}
+	if foundTenant.Region != nil {
+		data.Region = types.StringValue(*foundTenant.Region)
 	}
 	if foundTenant.Tags != nil {
 		tagList, diags := types.ListValueFrom(ctx, types.StringType, *foundTenant.Tags)
