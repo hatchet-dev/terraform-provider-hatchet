@@ -60,7 +60,7 @@ func (r *OrganizationMemberResource) Schema(ctx context.Context, req resource.Sc
 				},
 			},
 			"role": schema.StringAttribute{
-				MarkdownDescription: "Role of the member in the organization. Currently only 'OWNER' is supported.",
+				MarkdownDescription: "Role of the member in the organization. One of `OWNER`, `MEMBER`.",
 				Required:            true,
 			},
 			"status": schema.StringAttribute{
@@ -130,10 +130,9 @@ func (r *OrganizationMemberResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Validate role
 	roleStr := data.Role.ValueString()
-	if roleStr != "OWNER" {
-		resp.Diagnostics.AddError("Invalid Role", "Currently only 'OWNER' role is supported")
+	if !managementclient.OrganizationMemberRoleType(roleStr).Valid() {
+		resp.Diagnostics.AddError("Invalid Role", fmt.Sprintf("Role must be one of 'OWNER', 'MEMBER', got: %q", roleStr))
 		return
 	}
 

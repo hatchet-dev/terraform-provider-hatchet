@@ -32,10 +32,10 @@ resource "hatchet_organization_member" "john" {
   role  = "OWNER"
 }
 
-# Invite another user to the organization
+# Invite another user to the organization as a member
 resource "hatchet_organization_member" "jane" {
   email = "jane@example.com"
-  role  = "OWNER"
+  role  = "MEMBER"
 }
 ```
 
@@ -45,7 +45,7 @@ resource "hatchet_organization_member" "jane" {
 ### Required
 
 - `email` (String) Email address of the user to invite to the organization.
-- `role` (String) Role of the member in the organization. Currently only 'OWNER' is supported.
+- `role` (String) Role of the member in the organization. One of `OWNER`, `MEMBER`.
 
 ### Read-Only
 

@@ -17,8 +17,8 @@ resource "hatchet_organization_member" "john" {
   role  = "OWNER"
 }
 
-# Invite another user to the organization
+# Invite another user to the organization as a member
 resource "hatchet_organization_member" "jane" {
   email = "jane@example.com"
-  role  = "OWNER"
+  role  = "MEMBER"
 }
